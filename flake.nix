@@ -7,9 +7,7 @@
     pre-commit-hooks-nix.url = "github:hercules-ci/pre-commit-hooks.nix/flakeModule";
     pre-commit-hooks-nix.inputs.nixpkgs.follows = "nixpkgs";
     treefmt-nix.url = "github:numtide/treefmt-nix";
-    # https://github.com/IntersectMBO/cardano-addresses
     cardano-addresses.url = "github:IntersectMBO/cardano-addresses";
-    # https://github.com/IntersectMBO/cardano-cli
     cardano-cli.url = "github:IntersectMBO/cardano-cli";
   };
 

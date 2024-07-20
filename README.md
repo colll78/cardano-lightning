@@ -35,19 +35,19 @@ Simple tool for creating wallets and mutlisig scripts and txs. Unfortunatelly fo
       $ ls multi-sig
       addr.pay  addr_test.pay  script.json
       ```
-  * Generate address locks both the stake and assets at the same multisig address (pleaes note 1 byte header `30` and repeated 28 bytes ending with `8988`):
+  * Generated address has both credentials are at the same multisig address (please note 1 byte header `30` and repeated 28 bytes ending with `8988`):
       ```
       $ cat ~/multi-sig/addr_test.pay | bech32
       30b6f2452887b3754ff1b3ba72588da03215b5501feac5ecce2dac8988b6f2452887b3754ff1b3ba72588da03215b5501feac5ecce2dac8988
       ```
-  * So this is our testnet address for this particular multisig:
+  * This is our testnet address for this particular multisig:
       ```
       $ cat ~/multi-sig/addr_test.pay
       addr_test1xzm0y3fgs7eh2nl3kwa8ykyd5qeptd2srl4vtmxw9kkgnz9k7fzj3panw48lrva6wfvgmgpjzk64q8l2chkvutdv3xyqfw2auw
 
       ```
 
-  * Let's assume that we have some UTxO which we want to spend:
+  * Let's assume that we have some UTxO which is locked at our multi-sig (2 out of 3) address and which we want to spend:
 
       ```
       $ cardano-cli query utxo  --testnet-magic 1 --address addr_test1xzm0y3fgs7eh2nl3kwa8ykyd5qeptd2srl4vtmxw9kkgnz9k7fzj3panw48lrva6wfvgmgpjzk64q8l2chkvutdv3xyqfw2auw
@@ -69,14 +69,14 @@ Simple tool for creating wallets and mutlisig scripts and txs. Unfortunatelly fo
       $ cardano-cli transaction submit --testnet-magic 1 --tx-file tx-signed-1.raw
       Command failed: transaction submit  Error: Error while submitting tx: ShelleyTxValidationError ShelleyBasedEraBabbage (ApplyTxError (UtxowFailure (AlonzoInBabbageUtxowPredFailure (ShelleyInAlonzoUtxowPredFailure (ScriptWitnessNotValidatingUTXOW (fromList [ScriptHash "b6f2452887b3754ff1b3ba72588da03215b5501feac5ecce2dac8988"])))) :| []))
       ```
-  * We can sign it once again and the submit suceeds:
+  * We can sign it once again and then submit suceeds:
 
       ```
       $ cardano-cli transaction sign --tx-file tx-signed-1.raw --testnet-magic 1 --signing-key-file wallet-2/addr.skey  --out-file tx-signed-2.raw
       $ cardano-cli transaction submit --testnet-magic 1 --tx-file tx-signed-2.raw
       Transaction successfully submitted.
       ```
-  * Submission is successful because we our required number of signatures is two:
+  * Submission is successful because our script looks like this:
 
       ```$ cat multi-sig/script.json```
       ```json

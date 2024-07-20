@@ -9,6 +9,7 @@
     treefmt-nix.url = "github:numtide/treefmt-nix";
     cardano-addresses.url = "github:IntersectMBO/cardano-addresses";
     cardano-cli.url = "github:IntersectMBO/cardano-cli";
+    bech32.url = "github:IntersectMBO/bech32";
   };
 
   outputs = inputs@{ flake-parts, ... }:
@@ -45,6 +46,8 @@
             packages = with pkgs; [
               inputs.cardano-cli.packages.${system}."cardano-cli:exe:cardano-cli"
               inputs.cardano-addresses.packages.${system}."cardano-addresses-cli:exe:cardano-address"
+              inputs.bech32.packages.${system}."bech32:exe:bech32"
+              b2sum
             ];
           };
         };

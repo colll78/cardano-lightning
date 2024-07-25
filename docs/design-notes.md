@@ -65,98 +65,98 @@ TODO
 
 ```mermaid
  sequenceDiagram
-  participant Service Consumer
-  participant Service Provider
-  participant Payment Gateway
+  participant Consumer
+  participant Provider
+  participant Gateway
 
-  Service Consumer-->>Payment Gateway: Thx. Sending funds
-  Payment Gateway-->>Service Consumer: Cool. Here's a <hashed-secret>. I know Service Provider
-  Service Consumer->>Service Provider: Here's a 10.2$ cheque commitment
-  Note over Service Consumer,Service Provider: Payload( 2 * P, <hashed-secret> )
-  Service Provider->>Payment Gateway: Here's 10$ cheque commitment with <hashed-secret>
-  Note over Service Provider,Payment Gateway: Payload( P, <hashed-secret> )
-  Payment Gateway->>Service Provider: Thx. Here's the secret
-  Service Provider->>Payment Gateway: Here's the 10$ cheque
-  Service Provider->>Service Consumer: Here's the secret
-  Service Consumer->>Service Provider: Here's the 10.2$ cheque
+  Consumer-->>Gateway: Thx. Sending funds
+  Gateway-->> Consumer: Cool. Here's a <hashed-secret>. I know  Provider
+  Consumer->> Provider: Here's a 10.2$ cheque commitment
+  Note over  Consumer, Provider: Payload( 2 * P, <hashed-secret> )
+  Provider->>Gateway: Here's 10$ cheque commitment with <hashed-secret>
+  Note over  Provider,Gateway: Payload( P, <hashed-secret> )
+  Gateway->> Provider: Thx. Here's the secret
+  Provider->>Gateway: Here's the 10$ cheque
+   Provider->> Consumer: Here's the secret
+   Consumer->> Provider: Here's the 10.2$ cheque
 ```
 
 #### Evil middleman 
 
-+ How does "Service Consumer" know "Service Provider" is paying Payment Gateway the full fee?! 
++ How does "Consumer" know "Provider" is paying Gateway the full fee?! 
 
-Payment Gateway will only reveal the secret if it matches their expectations. 
+Gateway will only reveal the secret if it matches their expectations. 
 Otherwise no money will change hands. 
 
 
 #### Evil Recipient
 
-As before but Payment Gateway doesn't play nice.
+As before but Gateway doesn't play nice.
 He reveals the the secret only on the L1.
 
 ```mermaid
  sequenceDiagram
-  participant Service Consumer
-  participant Service Provider
-  participant Payment Gateway
+  participant Consumer
+  participant Provider
+  participant Gateway
 
-  Service Consumer-->>Payment Gateway: Thx. Sending funds
-  Payment Gateway-->>Service Consumer: Cool. Here's a <hashed-secret>. I know Service Provider
-  Service Consumer->>Service Provider: Here's a 10.2$ cheque commitment
-  Note over Service Consumer,Service Provider: Payload( 2 * P, <hashed-secret> )
-  Service Provider->>Payment Gateway: Here's 10$ cheque commitment with <hashed-secret>
-  Note over Service Provider,Payment Gateway: Payload( P, <hashed-secret> )
-  Payment Gateway-->Service Provider: **SILENCE**
-  Payment Gateway->>L1: Cash cheque commitment with secret
-  Service Provider->L1: Service Provider sees Payment Gateway's secret
-  Service Provider->>Service Consumer: Here's the secret
-  Service Consumer->>Service Provider: Here's the 10.2$ cheque
+  Consumer-->>Gateway: Thx. Sending funds
+  Gateway-->>Consumer: Cool. Here's a <hashed-secret>. I know Provider
+  Consumer->>Provider: Here's a 10.2$ cheque commitment
+  Note over Consumer,Provider: Payload( 2 * P, <hashed-secret> )
+  Provider->>Gateway: Here's 10$ cheque commitment with <hashed-secret>
+  Note over Provider,Gateway: Payload( P, <hashed-secret> )
+  Gateway-->Provider: **SILENCE**
+  Gateway->>L1: Cash cheque commitment with secret
+  Provider->L1: Provider sees Gateway's secret
+  Provider->>Consumer: Here's the secret
+  Consumer->>Provider: Here's the 10.2$ cheque
 ```
 
 #### No resolution at route source
 
 ```mermaid
  sequenceDiagram
-  participant Service Consumer
-  participant Service Provider
-  participant Payment Gateway
+  participant Consumer
+  participant Provider
+  participant Gateway
 
-  Service Consumer-->>Payment Gateway: Thx. Sending funds
-  Payment Gateway-->>Service Consumer: Cool. Here's a <hashed-secret>. I know Service Provider
-  Service Consumer->>Service Provider: Here's a 10.2$ cheque commitment
-  Note over Service Consumer,Service Provider: Payload( 2 * P, <hashed-secret> )
-  Service Provider->>Payment Gateway: Here's 10$ cheque commitment with <hashed-secret>
-  Note over Service Provider,Payment Gateway: Payload( P, <hashed-secret> )
-  Payment Gateway->>Service Provider: Thx. Here's the secret
-  Service Provider->>Payment Gateway: Here's the 10$ cheque
-  Service Provider->>Service Consumer: Here's the secret
-  Service Consumer->>Service Provider: ** SILENCE **
-  Service Provider->>L1: Cash cheque commitment with secret
+  Consumer-->>Gateway: Thx. Sending funds
+  Gateway-->>Consumer: Cool. Here's a <hashed-secret>. I know Provider
+  Consumer->>Provider: Here's a 10.2$ cheque commitment
+  Note over Consumer,Provider: Payload( 2 * P, <hashed-secret> )
+  Provider->>Gateway: Here's 10$ cheque commitment with <hashed-secret>
+  Note over Provider,Gateway: Payload( P, <hashed-secret> )
+  Gateway->>Provider: Thx. Here's the secret
+  Provider->>Gateway: Here's the 10$ cheque
+  Provider->>Consumer: Here's the secret
+  Consumer->>Provider: ** SILENCE **
+  Provider->>L1: Cash cheque commitment with secret
 ```
-Service Provider deems Service Consumer unreliable and my close the account. 
+Provider deems Consumer unreliable and my close the account. 
 
 #### No resolution on route
 
 ```mermaid
  sequenceDiagram
-  participant Service Consumer
-  participant Service Provider
-  participant Payment Gateway
+  participant Consumer
+  participant Provider
+  participant Gateway
 
-  Service Consumer-->>Payment Gateway: Thx. Sending funds
-  Payment Gateway-->>Service Consumer: Cool. Here's a <hashed-secret>. I know Service Provider
-  Service Consumer->>Service Provider: Here's a 10.2$ cheque commitment
-  Note over Service Consumer,Service Provider: Payload( 2 * P, <hashed-secret> )
-  Service Provider->>Payment Gateway: Here's 10$ cheque commitment with <hashed-secret>
-  Note over Service Provider,Payment Gateway: Payload( P, <hashed-secret> )
-  Payment Gateway->>Service Provider: Thx. Here's the secret
-  Service Provider-->Payment Gateway: ** SILENCE **
-  Payment Gateway->>L1: Cash cheque commitment with secret
-  Service Provider->L1: Service Provider sees Payment Gateway's secret
-  Service Provider->>Service Consumer: Here's the secret
-  Service Consumer->>Service Provider: Here's the 10.2$ cheque
+  Consumer-->>Gateway: Thx. Sending funds
+  Gateway-->>Consumer: Cool. Here's a <hashed-secret>. I know Provider
+  Consumer->>Provider: Here's a 10.2$ cheque commitment
+  Note over Consumer,Provider: Payload( 2 * P, <hashed-secret> )
+  Provider->>Gateway: Here's 10$ cheque commitment with <hashed-secret>
+  Note over Provider,Gateway: Payload( P, <hashed-secret> )
+  Gateway->>Provider: Thx. Here's the secret
+  Provider-->Gateway: ** SILENCE **
+  Gateway->>L1: Cash cheque commitment with secret
+  Provider->L1: Provider sees Gateway's secret
+  Provider->>Consumer: Here's the secret
+  Consumer->>Provider: Here's the 10.2$ cheque
 ```
-Payment Gateway deems Service Provider unreliable and closes the account.
+Gateway deems Provider unreliable and closes the account.
 
 ### Multi-cheque 
 
@@ -164,8 +164,8 @@ We use Channels to handle mutliple unresolved cheques simultaneously.
 This prevents channels being blocked during resolution.
 Consider the case that: 
 
-1. Service Consumer pays Payment Gateway via Service Provider and then Dennis before resolving the first cheque.
-    2. And the cheque to Payment Gateway resolves before or after Dennis. 
-    3. Or the cheque to Payment Gateway fails to resolve.  
+1. Consumer pays Gateway via Provider and then Dennis before resolving the first cheque.
+    2. And the cheque to Gateway resolves before or after Dennis. 
+    3. Or the cheque to Gateway fails to resolve.  
 
 TODO

@@ -43,8 +43,8 @@ const L1_RESOLUTION_PERIOD = P = 24 * 60 * 60 * 1000 // Day
 A cheque commitment comes with a signed payload.
 ```ts
 type Payload = {
-  valid_until : Timestamp,
-  hashed_secret: ByteArray,
+  validUntil : Timestamp,
+  hashedSecret: ByteArray,
 }
 ```
 These can be resolved on the L1 if there is failure to agree on the L2.

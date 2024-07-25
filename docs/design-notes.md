@@ -14,7 +14,6 @@ This is a working document hosting our current ideas about the protocols design 
 + pwa for L2 payments 
 + pwa for L1/L2 account management 
 
-
 ## Design
 
 ### L1
@@ -25,13 +24,11 @@ This is a working document hosting our current ideas about the protocols design 
 
 ```ts
 type State = {
-    latest_cheque : BigInt,
-    balance: BigInt, 
-    excluded_cheques: BigInt[]
+    latestCheque : BigInt,
+    balance: BigInt,
+    excludedCheques: BigInt[]
 }
 ```
-
-
 
 #### Constants 
 
@@ -60,6 +57,36 @@ TODO
 ## Examples 
 
 ### One payment, One hop
+
+#### Two parties
+
+##### Without payment confirmation
+
+```mermaid
+ sequenceDiagram
+  participant Consumer
+  participant Provider
+
+  Consumer-->> Provider: Thx. Sending 10.2$
+  Consumer->> Provider: Here's the 10.2$ cheque
+
+  Consumer-->> Provider: Thx. Sending another 5$ 
+  Consumer->> Provider: Here's the 15.2$ cheque
+```
+
+##### With payment confirmation
+
+```mermaid
+ sequenceDiagram
+  participant Consumer
+  participant Provider
+
+  Consumer-->> Provider: Thx. Sending funds
+  Provider-->> Consumer: Cool. Here's a <hashed-secret>. I know  Gateway
+  Consumer->>Provider: Here's 10$ cheque commitment with <hashed-secret>
+  Provider->> Consumer: Thx. Here's the secret
+  Consumer->> Provider: Here's the 10.2$ cheque
+```
 
 #### Well behaved
 

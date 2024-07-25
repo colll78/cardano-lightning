@@ -145,7 +145,8 @@ def cut_the_pie(script_file, tx_in, outputs, testnet_magic=None):
     (mainnet_address, testnet_address) = get_script_addresses(script_file)
     policy_address = testnet_address if testnet_magic else mainnet_address
 
-    # Query UTxO
+    # TODO: This could be optionally provided together with TxOutRef so we
+    # don't have to query the blockchain for the UTxO.
     query_cmd = ["cardano-cli", "query", "utxo", "--tx-in", tx_in, "--output-json"]
     if testnet_magic:
         query_cmd.extend(["--testnet-magic", str(testnet_magic)])

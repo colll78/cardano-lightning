@@ -103,8 +103,8 @@ Here's a proposal:
 ```yaml
 "/open": 
   description: |
-    Opens account between parties A and B with quantities `qa` and `qb` respectively.
-    Returns account id
+    Opens channel between parties A and B with quantities `qa` and `qb` respectively.
+    Returns channel id
   params:
     pka : PubKey 
     pkb : PubKey
@@ -113,7 +113,7 @@ Here's a proposal:
   response: bech32
 "/status": 
   description: |
-    Get current value of accounts.
+    Get current value of channel.
     In the case that the channel does not exist or has been closed, then fail. 
   params: 
     id: bech32

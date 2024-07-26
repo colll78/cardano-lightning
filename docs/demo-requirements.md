@@ -109,8 +109,12 @@ Here's a proposal:
     pka : PubKey 
     pkb : PubKey
     qa : bigint
-    qb : bigint
-  response: bech32
+  response: ChannelId
+"/add": 
+  description: Add funds to (probably your own) an account
+  params: 
+    id: bech32
+    q: bigint
 "/status": 
   description: |
     Get current value of channel.
@@ -123,30 +127,11 @@ Here's a proposal:
 "/history": 
   description: |
     Get a list of all previous updates to state
-    In the case that the channel does not exist or has been closed, then fail. 
+    In the case that the channel does not exist or has been closed, then indicate. 
   params: 
     id: bech32
-  returns: History
-"/add": 
-  description: Add funds to your an account
-  params: 
-    id: bech32
-    q: bigint
-"/sub": 
-  description: | 
-    Remove funds from other account.
-    Requires a signed state, own signature.
-    Optionally an additional cheque, or and unresolved cheque with proof secret.
-  args: 
-    state: SignedState
-    cheque: Cheque?
-    proof: Proof? 
-"/end": 
-  description: |
-    Both parties agree to end the channel.
-    The channel is immediately terminated.
-  args: 
-    state: SignedEndState
+  returns: History (optional isTerminated)
+
 "/close": 
   description: |
     One party closes the channel
@@ -162,6 +147,25 @@ Here's a proposal:
   description: |
     If a channel is closed and no counter is submitted during a time window, 
     then the channel can be unanimously terminated.
+
+>>> EXTRA >>>
+
+"/sub": 
+  description: | 
+    Remove funds from other account.
+    Requires a signed state, own signature.
+    Optionally an additional cheque, or and unresolved cheque with proof secret.
+  args: 
+    state: SignedState
+    cheque: Cheque?
+    proof: Proof? 
+"/end": 
+  description: |
+    Both parties agree to end the channel.
+    The channel is immediately terminated.
+  args: 
+    state: SignedEndState
+
 ```
 
 TODO: 
@@ -173,16 +177,62 @@ TODO:
 
 ## Reduced feature set
 
-### Network management
+### Menu 
 
-  1. View existing channels. Click to open channel manager with channel 
-  2. Open new channel 
-  3. View requests
+1. Home 
+2. Network manager 
+3. Key manager 
+4. Address book
 
-### Channel management
+### Home
+
+  1. Pay / (Bill)
+
+### Pay / (Bill)
+
+#### Pay 
+
+1. Scan bill and gen cheque.
+  + If channel exist and funded issue cheque 
+  + If channel does not exist `open` channel and fund and issue cheque 
+  + If channel exists but is .... 
+
+#### Bill 
+
+1. Gen qr code with (pubkey, int).
+
+### Feed page 
+
+1. New L1 event : open / join / close / counter / finish => Channel manager
+2. New L2 event : cheque => Channel manager
+
+### Network manager 
+
+2. "" : Open channel / Address book / key manager 
+3. View My channels
+
+### Key manager
+
++ generate key 
++ Pubkey to qr code 
+
+### Address book 
+
++ Address book (identifier : pubkey)
++ Scan qr code/ type pubkey to add to address book
++ Open channel from address book
+
+### Channel manager
 
   1. View L1/L2 status 
   2. View L1/L2 history
   3. Do add, sub
   4. Request end
   5. Send cheque
+
+## MILESTONE 
+
+- [ ] @waalge nix flake wrapped rust api with `open` and `add` and `status`.
+- [ ] @paluh gen bill and scan bill and pubkey. PWA friendly app storage. 
+- [ ] @paluh DNS
+- [ ] @nhenin mock ups of the dapp 

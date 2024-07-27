@@ -191,3 +191,30 @@ Here's a proposal:
 - [ ] @paluh gen bill and scan bill and pubkey. PWA friendly app storage. 
 - [ ] @paluh DNS
 - [ ] @nhenin mock ups of the dapp 
+
+
+## Backend design
+
+### DB 
+
+DB schema
+
++ Account
+  + at : Timestamp - opened at timestamp 
+  + pk : PubKey - pubkey (primary key)
+  + name : String - short pretty name
++ Add
+  + at : Timestamp
+  + src : Address - L1 address 
+  + trg : PubKey - account pk 
+  + q : Int - quantity
++ Sub 
+  + at : Timestamp 
+  + src : Pubkey - account pk 
+  + trg : Address - L1 address 
+  + q : Int - quantity
++ Pay 
+  + at : Timestamp 
+  + src : Pubkey - account pk 
+  + trg : Pubkey - account pk 
+  + q : Int - quantity

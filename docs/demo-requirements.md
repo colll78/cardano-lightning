@@ -101,134 +101,89 @@ lets have an interface modelling the L1.
 Here's a proposal:
 
 ```yaml
-"/open": 
+"/open":
   description: |
-    Opens channel between parties A and B with quantities `qa` and `qb` respectively.
-    Returns channel id
+    Connect to the gateway.
+    Add pubkey to address book
   params:
-    pka : PubKey 
-    pkb : PubKey
-    qa : bigint
-  response: ChannelId
+    pk: PubKey 
+    handle: String
+  return: 
+    Result
+
+"/accounts": 
+  description: |
+    Get all known accounts
+
+"/pay": 
+  description: |
+    Transfer funds on L2 from src to trg
+  params: 
+    src: PubKey
+    trg: PubKey
+    q: Int
+
 "/add": 
-  description: Add funds to (probably your own) an account
+  description: |
+    Mimics Transfer funds from L1 to L2
   params: 
-    id: bech32
-    q: bigint
-"/status": 
-  description: |
-    Get current value of channel.
-    In the case that the channel does not exist or has been closed, then fail. 
-  params: 
-    id: bech32
-  returns:
-    qa: bigint
-    qb: bigint
-"/history": 
-  description: |
-    Get a list of all previous updates to state
-    In the case that the channel does not exist or has been closed, then indicate. 
-  params: 
-    id: bech32
-  returns: History (optional isTerminated)
-
-"/close": 
-  description: |
-    One party closes the channel
-  args: 
-    state: SignedEndState
-    cheque: Cheque?
-    proof: Proof?
-"/counter":
-  description: |
-    Counter party may endorse or contests the state present by the close.
-    The channel is terminated.
-"/finish":
-  description: |
-    If a channel is closed and no counter is submitted during a time window, 
-    then the channel can be unanimously terminated.
-
->>> EXTRA >>>
+    src: Address
+    trg: PubKey
+    q: Int
 
 "/sub": 
-  description: | 
-    Remove funds from other account.
-    Requires a signed state, own signature.
-    Optionally an additional cheque, or and unresolved cheque with proof secret.
-  args: 
-    state: SignedState
-    cheque: Cheque?
-    proof: Proof? 
-"/end": 
   description: |
-    Both parties agree to end the channel.
-    The channel is immediately terminated.
-  args: 
-    state: SignedEndState
+    Mimics Transfer funds from L2 to L1
+  params: 
+    src: PubKey
+    trg: Address
+    q: Int
 
+"/status": 
+  description: |
+    Get current value of account.
+  params: 
+    pk: PubKey
+  returns:
+    q: Int
+
+"/history": 
+  description: |
+    Get a list of all previous transfers (add, sub, pay)
+  params: 
+    pk: PubKey 
+  returns: List of (Add | Sub | Pay)
 ```
-
-TODO: 
-
-- [ ] Complete this api into a compliant openapi schema. 
-- [ ] Specify the datatype and signatures.
-- [ ] Draw a lifecycle diagram for the L1
-- [ ] De-prioritize close, counter, finish
 
 ## Reduced feature set
 
-### Menu 
+### Landing 
 
-1. Home 
-2. Network manager 
-3. Key manager 
-4. Address book
++ Open account
 
 ### Home
 
-  1. Pay / (Bill)
++ Status 
++ Pay / Bill / Fund
++ History
 
-### Pay / (Bill)
+### Pay
 
-#### Pay 
++ By Scan bill
++ By manual: account / q
 
-1. Scan bill and gen cheque.
-  + If channel exist and funded issue cheque 
-  + If channel does not exist `open` channel and fund and issue cheque 
-  + If channel exists but is .... 
+### Pay confirmation
 
-#### Bill 
++ Confirm
 
-1. Gen qr code with (pubkey, int).
+### Bill: Gen 
 
-### Feed page 
++ Gen bill: q
 
-1. New L1 event : open / join / close / counter / finish => Channel manager
-2. New L2 event : cheque => Channel manager
+### Bill: Show
 
-### Network manager 
-
-2. "" : Open channel / Address book / key manager 
-3. View My channels
-
-### Key manager
-
-+ generate key 
-+ Pubkey to qr code 
-
-### Address book 
-
-+ Address book (identifier : pubkey)
-+ Scan qr code/ type pubkey to add to address book
-+ Open channel from address book
-
-### Channel manager
-
-  1. View L1/L2 status 
-  2. View L1/L2 history
-  3. Do add, sub
-  4. Request end
-  5. Send cheque
++ Show QR 
++ Show text
 
 ## MILESTONE 
 
@@ -236,3 +191,30 @@ TODO:
 - [ ] @paluh gen bill and scan bill and pubkey. PWA friendly app storage. 
 - [ ] @paluh DNS
 - [ ] @nhenin mock ups of the dapp 
+
+
+## Backend design
+
+### DB 
+
+DB schema
+
++ Account
+  + at : Timestamp - opened at timestamp 
+  + pk : PubKey - pubkey (primary key)
+  + name : String - short pretty name
++ Add
+  + at : Timestamp
+  + src : Address - L1 address 
+  + trg : PubKey - account pk 
+  + q : Int - quantity
++ Sub 
+  + at : Timestamp 
+  + src : Pubkey - account pk 
+  + trg : Address - L1 address 
+  + q : Int - quantity
++ Pay 
+  + at : Timestamp 
+  + src : Pubkey - account pk 
+  + trg : Pubkey - account pk 
+  + q : Int - quantity

@@ -1,3 +1,5 @@
+Status: Draft
+
 # Channel state representation
 
 ## Cheque formats

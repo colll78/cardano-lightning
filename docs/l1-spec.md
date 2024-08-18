@@ -3,22 +3,22 @@
 ## Intro
 
 Cardano lightning is p2p payment solution built over the Cardano blockchain.
-It is an L2 optimized for: 
+It is an L2 optimized for:
 
-+ Near instant settlement 
-+ Scalability 
++ Near instant settlement
++ Scalability
 
-It is to be interoperable with other lightning networks, and is very much inspired by bitcoin lightning. 
+It is to be interoperable with other lightning networks, and is very much inspired by bitcoin lightning.
 
 Users of the network maintain two party channels, through which they can send and receive funds.
 We may refer to the participants of the channel as the party and counter party.
 
-A user can perform various high level actions, including: 
+A user can perform various high level actions, including:
 
 1. Open, maintain, and terminate a channel
 2. Send, receive, and resolve funds
 
-The first set of actions concern the L1. 
+The first set of actions concern the L1.
 
 ## Channel lifecycle
 ```mermaid
@@ -53,15 +53,36 @@ flowchart LR
     closed -->|drain| n1
 ```
 
-## Datatypes 
+## Datatypes
+
+### Terminology
+
+* `Party0` and `Party1` - refers to the party indexed as `0` and `1` respectively which are used to refer to the two parties in the channel.
+
+* `Party` and `CounterParty`- we use both terms to refer to either party depending on the context (so `Party0` can be referred as `Party` or `CounterParty`).
+
+* We use `Account0` or `Delta0` to refer to entities related to `Party0`. We use `*1` for `Party1`.
 
 ```haskell
-type Index = Int
-type Amount = Int 
 
-data Cheque 
+-- | Ever increasing integer sequence
+type Index = Int
+type Amount = Int
+-- | Account delta which is a difference between the current state given the off-chain set of cheques and the
+-- | initial on-chain state of the channel.
+type Delta = Int
+
+-- Cheque:
+-- * Signed intention to transfer money from signatory channel account to the counter party account.
+-- * Cheques are indexed separately for `Party0` and `Party1`.
+-- * Cheque amount for a given `Index` can be only increased.
+--
+-- Example: The simplest unidirectional payment flow consists of a channel which has only one cheque index with ever increasing amount.
+data Cheque
   = NormalCheque Index Amount
   | LockedCheque Index Amount Lock
+   -- ^ Conditional cheque which can be used only together with a secret (preimage of the lock)
+   -- TODO: Introduce a timeout to the `LockedCheque` - signatory should sign intention which has expiration date.
 
 type Hash32 = ByteString -- 32 bytes
 type Hash28 = ByteString -- 28 bytes ?? 
@@ -71,20 +92,27 @@ data Lock
   | Sha2256Lock Hash32
   | Sha3256Lock Hash32
 
-type Exc = [Int]
-type Delta = Int
+-- | Pending locked cheques which are not yet resolved. We want to exclude them
+-- | from the `Squash` so they not lock the channel processing - squashing and cash outs.
+type Excluded = [Index]
 
-data Snapshot = Snapshot {
-  delta : Delta, 
-  idx0 : Index, 
-  exc0 : Exc, 
-  idx1 : Index, 
-  exc1 : Exc, 
+-- | Squash represents a total sum of the channel:
+-- | * It sums up a given set of cheques (up too `idx0` and `idx1`).
+-- | * It excludes a given set of cheques (up to `exc0` and `exc1`).
+-- | * `Squash` can be used during channel closure and possibly empty list of:
+-- |    * following cheques with `Index` greater than `idx0` or `idx1` (depending on the party)
+-- |    * or cheques from the `Excluded` list together with resolution.
+data Squash = Squash {
+  delta0 : Delta,
+  idx0 : Index,
+  exc0 : Excluded,
+  idx1 : Index,
+  exc1 : Excluded,
 }
 
 type Sig64 = ByteString -- 64 bytes
 
-data Signature 
+data Signature
   = Ed25519Signature Sig64
   | EcdsaSecp256k1Signature Sig64
   | SchnorrSecp256k1Signature Sig64
@@ -97,7 +125,8 @@ data Secret = ByteString
 
 data SignedCheque 
   = SignedNormalCheque Cheque Signature  -- Only NormalCheque
-  | SignedLockedCheque Cheque Signature Secret -- Only LockedCheque
+  | SignedLockedCheque Cheque Signature Secret
+  -- ^ Only LockedCheque
 
 type PubKey = ByteString -- 32 bytes 
 type ChannelId = ByteString -- 32 bytes 

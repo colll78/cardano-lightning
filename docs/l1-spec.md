@@ -80,7 +80,8 @@ type Delta = Int
 -- Example: The simplest unidirectional payment flow consists of a channel which has only one cheque index with ever increasing amount.
 data Cheque
   = NormalCheque Index Amount
-  | LockedCheque Index Amount Lock
+  | HtlcCheque Index Amount Timestamp Lock 
+  | PtlcCheque Index Amount Timestamp Lock
    -- ^ Conditional cheque which can be used only together with a secret (preimage of the lock)
    -- TODO: Introduce a timeout to the `LockedCheque` - signatory should sign intention which has expiration date.
 

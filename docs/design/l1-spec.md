@@ -57,20 +57,24 @@ flowchart LR
 
 ### Terminology
 
-* `Party0` and `Party1` - refers to the party indexed as `0` and `1` respectively which are used to refer to the two parties in the channel.
+* `PartyA` and `PartyB` - are unique idetnifiers of the parties which channel partners.
 
-* `Party` and `CounterParty`- we use both terms to refer to either party depending on the context (so `Party0` can be referred as `Party` or `CounterParty`).
+* `Party` and `CounterParty`- we use both terms to refer to either party depending on the context (so `PartyA` can be referred as `Party` or `CounterParty`).
 
-* We use `Account0` or `Delta0` to refer to entities related to `Party0`. We use `*1` for `Party1`.
+* We use `AccountA` or `DeltaA` to refer to entities related to `PartyA`. We use `*B` for `PartyB`.
 
 ```haskell
 
--- | Ever increasing integer sequence
-type Index = Int
+-- | Monotically increasing integer sequence which
+-- | represents uniquely digital cheque. Please note that the cheque value can be bumped up during its lifecycle.
+type ChequeId = Int
+
 type Amount = Int
 -- | Account delta which is a difference between the current state given the off-chain set of cheques and the
 -- | initial on-chain state of the channel.
 type Delta = Int
+
+type ExpirationTime = Timestamp
 
 -- Cheque:
 -- * Signed intention to transfer money from signatory channel account to the counter party account.
@@ -79,9 +83,25 @@ type Delta = Int
 --
 -- Example: The simplest unidirectional payment flow consists of a channel which has only one cheque index with ever increasing amount.
 data Cheque
-  = NormalCheque Index Amount
-  | HtlcCheque Index Amount Timestamp Lock 
-  | PtlcCheque Index Amount Timestamp Lock
+  = NormalCheque ChequeId Amount
+  | HTLCCheque ChequeId Amount ExpirationTime Lock 
+  | PTLCCheque ChequeId Amount ExpirationTime Lock
+  | SquashCheque {
+  -- | ^ SquashCheque represents a total sum of the one party cheques:
+  -- | * It sums up a given set of cheques - up to `chequeId`.
+  -- | * It excludes a given set of cheques - check `excluded` list.
+  -- | * `Squash` can be used during channel closure:
+  -- |    * only one `Squash` can be submitted.
+  -- |    * possibly empty list of following cheques with id greater than `chequeId`.
+  -- |    * any cheques from the `Excluded` list together with their resolutions.
+    amount : Amount,
+    chequeId : ChequeId,
+    excluded : [ChequeId]
+    -- | ^ Ids of all the pending locked cheques which are not yet resolved. We want to exclude them from the `Squash` so they not lock the channel processing - squashing and cash outs.
+    -- Invariant: All cheques in this list have smaller id value then the `chequeId` itself.
+  }
+
+
    -- ^ Conditional cheque which can be used only together with a secret (preimage of the lock)
    -- TODO: Introduce a timeout to the `LockedCheque` - signatory should sign intention which has expiration date.
 
@@ -92,24 +112,6 @@ data Lock
   = Blake2b256Lock Hash32
   | Sha2256Lock Hash32
   | Sha3256Lock Hash32
-
--- | Pending locked cheques which are not yet resolved. We want to exclude them
--- | from the `Squash` so they not lock the channel processing - squashing and cash outs.
-type Excluded = [Index]
-
--- | Squash represents a total sum of the channel:
--- | * It sums up a given set of cheques (up too `idx0` and `idx1`).
--- | * It excludes a given set of cheques (up to `exc0` and `exc1`).
--- | * `Squash` can be used during channel closure and possibly empty list of:
--- |    * following cheques with `Index` greater than `idx0` or `idx1` (depending on the party)
--- |    * or cheques from the `Excluded` list together with resolution.
-data Squash = Squash {
-  delta0 : Delta,
-  idx0 : Index,
-  exc0 : Excluded,
-  idx1 : Index,
-  exc1 : Excluded,
-}
 
 type Sig64 = ByteString -- 64 bytes
 
@@ -132,39 +134,65 @@ data SignedCheque
 type PubKey = ByteString -- 32 bytes 
 type ChannelId = ByteString -- 32 bytes 
 
-data FixDat = FixDat {
+data Configuration = Configuration
+ {
   id : ChannelId, 
-  pk0 : PubKey, 
-  pk1 : PubKey, 
+  pubKeyA : [PubKey], 
+  pubKey1 : [PubKey], 
+  assetClass : AssetClass,
 }
 
-data VarDat 
-  = Ready
-  | Open OpenParams
-  | Closed ClosedParams
-  | Done
+-- During closing procedure a given party can
+data ClosingCheques
+  = Submitting {
+    chequeSum : Amount,
+    lastChequeId : ChequeId
+  }
+  | Submitted Amount
 
-data OpenParams = OpenParams {
-  delta : Delta, 
-  acc0 : Amount,
-  acc1 : Amount, 
-  snapshot : Snapshot,
-}
+data ChannelState 
+  = OffChainTransacting {
+      accountA : Amount,
+      accountB : Amount, 
+      -- ^ Total sum of the accounts should 
+      -- equal to the UTxO level value.
+      snapshot : Snapshot,
+    }
+  -- | Closing {
+  --    initiator: A | B,
+  --    counterPartyCheques : [Cheque]
+  --   }
+  -- ^ Non consensus closure after the first
+  -- party submitted his view of the state.
+  -- TODO: It is not clear yet what that view -- exactly mean
+  | Closing {
+      partyACheques : ClosingCheques
+      partyBCheques : ClosingCheques
+    }
+  -- ^ Multi step contestation closure which
+  -- allow submission of the cheque list in
+  -- chunks.
+  | Closed {
+    payoutA: Amount
+    payoutB: Amount
+  }
+
+
 
 data ClosedParams = ClosedParams {
   todo!
 }
 
-data Dat = Dat {
-  fix : FixDat,
-  var : VarDat, 
+data State = State {
+  configuration : Configuration,
+  channelState : ChannelState, 
 }
 
 data Idx = Int -- output index 
 
 data Red = Cont RedCont Idx | Drain
 
-data RedCont 
+data Action
   = Join
   | Add (Maybe SignedSnapshot)
   | Sub SignedSnapshot -- Maybe [SignedCheque]

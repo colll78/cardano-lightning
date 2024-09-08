@@ -1,6 +1,7 @@
 ---
 title: "full title"
-author: "@you"
+status: proposed | accepted
+authors: "@you"
 date: 2025-01-01
 tags: 
   - optional

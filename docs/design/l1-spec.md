@@ -1,16 +1,20 @@
-# Cardano Lightning : L1 Spec 
+# Cardano Lightning : L1 Specifications 
 
-## Intro
+## A Short Introduction to Lightning
 
-Cardano lightning is p2p payment solution built over the Cardano blockchain.
-It is an L2 optimized for:
+**Cardano Lightning** is a protocol designed for facilitating fast payments with *Cardano Fungible Tokens* by utilizing a network of channels. This protocol draws significant inspiration from the [Bitcoin Lightning Network Specification](https://github.com/lightning/bolts/blob/master/README.md), while uniquely leveraging the [Extended UTXO Model](https://iohk.io/en/research/library/papers/the-extended-utxo-model/) and the advanced scripting capabilities of the Cardano blockchain.
+
+### Channels
+
+Lightning works by establishing *channels*: 2 participants create a Lightning payment channel that contains some amount of Fungible Tokens (e.g. 5 ₳ , 500 DJED, 400 USDC) that they've locked up on the Cardano network. It is
+spendable only with both their signatures. 
+
+p2p payment solution built over the Cardano blockchain. It is an L2 optimized for:
 
 + Near instant settlement
 + Scalability
 
-It is to be interoperable with other lightning networks, and is very much inspired by bitcoin lightning.
-
-Users of the network maintain two party channels, through which they can send and receive funds.
+Users of the network maintain 2-party channels, through which they can send and receive funds.
 We may refer to the participants of the channel as the party and counter party.
 
 A user can perform various high level actions, including:
@@ -52,6 +56,7 @@ flowchart LR
     done -->|drain| n1
     closed -->|drain| n1
 ```
+
 
 ## Datatypes
 

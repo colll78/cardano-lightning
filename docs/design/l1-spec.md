@@ -70,98 +70,31 @@ flowchart LR
 
 ```haskell
 
--- | Monotically increasing integer sequence which
--- | represents uniquely digital cheque. Please note that the cheque value can be bumped up during its lifecycle.
-type ChequeId = Int
-
-type Amount = Int
--- | Account delta which is a difference between the current state given the off-chain set of cheques and the
--- | initial on-chain state of the channel.
-type Delta = Int
-
-type ExpirationTime = Timestamp
-
--- Cheque:
--- * Signed intention to transfer money from signatory channel account to the counter party account.
--- * Cheques are indexed separately for `Party0` and `Party1`.
--- * Cheque amount for a given `Index` can be only increased.
---
--- Example: The simplest unidirectional payment flow consists of a channel which has only one cheque index with ever increasing amount.
-data Cheque
-  = NormalCheque ChequeId Amount
-  | HTLCCheque ChequeId Amount ExpirationTime Lock 
-  | PTLCCheque ChequeId Amount ExpirationTime Lock
-  | SquashCheque {
-  -- | ^ SquashCheque represents a total sum of the one party cheques:
-  -- | * It sums up a given set of cheques - up to `chequeId`.
-  -- | * It excludes a given set of cheques - check `excluded` list.
-  -- | * `Squash` can be used during channel closure:
-  -- |    * only one `Squash` can be submitted.
-  -- |    * possibly empty list of following cheques with id greater than `chequeId`.
-  -- |    * any cheques from the `Excluded` list together with their resolutions.
-    amount : Amount,
-    chequeId : ChequeId,
-    excluded : [ChequeId]
-    -- | ^ Ids of all the pending locked cheques which are not yet resolved. We want to exclude them from the `Squash` so they not lock the channel processing - squashing and cash outs.
-    -- Invariant: All cheques in this list have smaller id value then the `chequeId` itself.
-  }
-
-
-   -- ^ Conditional cheque which can be used only together with a secret (preimage of the lock)
-   -- TODO: Introduce a timeout to the `LockedCheque` - signatory should sign intention which has expiration date.
-
-type Hash32 = ByteString -- 32 bytes
-type Hash28 = ByteString -- 28 bytes ?? 
-
-data Lock
-  = Blake2b256Lock Hash32
-  | Sha2256Lock Hash32
-  | Sha3256Lock Hash32
-
-type Sig64 = ByteString -- 64 bytes
-
-data Signature
-  = Ed25519Signature Sig64
-  | EcdsaSecp256k1Signature Sig64
-  | SchnorrSecp256k1Signature Sig64
-
-data SignedSnapshot = SignedSnapshot Snapshot Signature Signature
-
--- Length bound may apply for different locks.
--- Not enforced here at the type level.
-data Secret = ByteString 
-
-data SignedCheque 
-  = SignedNormalCheque Cheque Signature  -- Only NormalCheque
-  | SignedLockedCheque Cheque Signature Secret
-  -- ^ Only LockedCheque
-
-type PubKey = ByteString -- 32 bytes 
-type ChannelId = ByteString -- 32 bytes 
-
-data Configuration = Configuration
- {
-  id : ChannelId, 
-  pubKeyA : [PubKey], 
-  pubKey1 : [PubKey], 
-  assetClass : AssetClass,
+-- State of the Validator Script
+data ValidatorState = ValidatorState {
+  configuration : Configuration,
+  channelState : ChannelState, 
 }
 
--- During closing procedure a given party can
-data ClosingCheques
-  = Submitting {
-    chequeSum : Amount,
-    lastChequeId : ChequeId
-  }
-  | Submitted Amount
+data Account = AccountA | AccountB
 
+-- Actions available on the validator Script (Script's Redeemer)
+data Action
+  = Provision Account 
+  | Cash SignedSnapshot [SignedCheque]
+  | Close SignedSnapshot [SignedCheque]
+  | Drain 
+
+-- L1 -> 100 0
+---L2 -> 80  20
+-- L1 -> 80  0  | 100 -20
 data ChannelState 
   = OffChainTransacting {
-      accountA : Amount,
-      accountB : Amount, 
+      accountA :: Amount,    
+      accountB :: Amount,       
       -- ^ Total sum of the accounts should 
       -- equal to the UTxO level value.
-      snapshot : Snapshot,
+      snapshot :: Snapshot,
     }
   -- | Closing {
   --    initiator: A | B,
@@ -182,27 +115,105 @@ data ChannelState
     payoutB: Amount
   }
 
+-- During closing procedure a given party can
+data ClosingCheques
+  = Submitting {
+    chequeSum : Amount,
+    lastChequeId : ChequeId
+  }
+  | Submitted Amount
 
 
-data ClosedParams = ClosedParams {
-  todo!
+
+-- | Monotically increasing integer sequence which
+-- | represents uniquely digital cheque. Please note that the cheque value can be bumped up during its lifecycle.
+type ChequeId = Int
+
+-- | Amount of the Fungible Token parametrized in the Channel  
+type Amount = Int
+
+-- | Account delta which is a difference between the current state given the off-chain set of cheques and the
+-- | initial on-chain state of the channel.
+type Delta = Amount
+
+type ExpirationTime = Timestamp
+
+-- Cheque:
+-- * Signed intention to transfer money from signatory channel account to the counter party account.
+-- * Cheques are indexed separately for `Party0` and `Party1`.
+-- * Cheque amount for a given `Index` can be only increased.
+--
+-- Example: The simplest unidirectional payment flow consists of a channel which has only one cheque index with ever increasing amount.
+data SignedCheque
+  = Direct { 
+      chequeId :: ChequeId,
+      amount ::  Amount, 
+      signature :: Signature
+    }
+  | Invoiced 
+      { chequeId :: ChequeId,
+        amount ::  Amount, 
+        expiration :: ExpirationTime, 
+        invoiceLock :: InvoiceLock, 
+        invoiceSecret :: InvoiceSecret 
+        signature :: Signature,
+      }
+
+data SignedSnapshot = SignedSnapshot SquashCheque Signature Signature
+
+data SquashCheque =  SquashCheque {
+  -- | ^ SquashCheque represents a total sum of the one party cheques:
+  -- | * It sums up a given set of cheques - up to `chequeId`.
+  -- | * It excludes a given set of cheques - check `excluded` list.
+  -- | * `Squash` can be used during channel closure:
+  -- |    * only one `Squash` can be submitted.
+  -- |    * possibly empty list of following cheques with id greater than `chequeId`.
+  -- |    * any cheques from the `Excluded` list together with their resolutions.
+    amount :: Amount,
+    chequeId :: ChequeId,
+    excluded :: [ChequeId]
+    -- | ^ Ids of all the pending locked multi-hop cheques which are not yet resolved. We want to exclude them from the `Squash` so they not lock the channel processing - squashing and cash outs.
+    -- Invariant: All cheques in this list have smaller id value then the `chequeId` itself.
+  }
+
+
+   -- ^ Conditional cheque which can be used only together with a secret (preimage of the lock)
+   -- TODO: Introduce a timeout to the `LockedCheque` - signatory should sign intention which has expiration date.
+
+-- Length bound may apply for different locks.
+-- Not enforced here at the type level.
+data InvoiceSecret = ByteString 
+
+data InvoiceLock
+  = Blake2b256Lock Hash32
+  | Sha2256Lock Hash32
+  | Sha3256Lock Hash32
+
+
+
+type PubKey = ByteString -- 32 bytes
+type Sig64 = ByteString -- 64 bytes
+type Hash32 = ByteString -- 32 bytes
+type Hash28 = ByteString -- 28 bytes ?? 
+data Signature
+  = Ed25519Signature Sig64
+  | EcdsaSecp256k1Signature Sig64
+  | SchnorrSecp256k1Signature Sig64
+
+
+type ChannelId = TxOutRef  
+
+data ChannelSettings = Settings
+ {
+  id : ChannelId, 
+  allowExternalProvisioning :: Boolean,
+  closingDeadline :: Duration
+  pubKeyA : PubKey,
+  pubKeyB : PubKey, 
+  assetClass : AssetClass,
 }
 
-data State = State {
-  configuration : Configuration,
-  channelState : ChannelState, 
-}
 
-data Idx = Int -- output index 
-
-data Red = Cont RedCont Idx | Drain
-
-data Action
-  = Join
-  | Add (Maybe SignedSnapshot)
-  | Sub SignedSnapshot -- Maybe [SignedCheque]
-  | Close SignedSnapshot [SignedCheque]
-  | Counter SignedSnapshot [SignedCheque]
 ```
 
 ## Constants 

@@ -17,50 +17,47 @@ Description: If and how channels should be identified on the chain.
 
 ### Identification on the chain
 
-As suggested above indentification of the channel insetance on the chain can be achived using different ways but it can require different client capabilites in order to use and verify it.
+As suggested above identification of the channel instance on the chain can be achieved using different ways but it can require different client capabilites in order to use and verify it.
 
 #### Different types of clients
 
 We should probably consider at least the following types of clients:
 
-    * Clients which have acceess to the full blockchain history or an interesting subset of it.
+ * Clients which have acceess to the full blockchain history or an interesting subset of it.
 
-    * Clients which have access to some certified verification source like Mithril
+ * Clients which have access to some certified verification source like Mithril
 
-    * Clients which have access to untrusted source of history but which can perform some verification using the certified source.
+ * Clients which have access to untrusted source of history but which can perform some verification using the certified source.
 
 From CL protocol adoption perspective the more nodes can operate using the second or third model the better.
 
 
 #### Different types of identification
 
-We can use at least three approaches to identify channels:
+We can use at least 3 approaches to identify channels:
 
-    * No direct identifier - channel instance is associated with the initial UTxO and the client folds the contract thread. In order to operate safely:
+##### 1. No direct identifier
 
-        * Either requires full access an indexer which provides all the intermediate transactions and requires quering Mithril aggregator for all the transactions.
+channel instance is associated with the initial UTxO and the client folds the contract thread. In order to operate safely:
+ * Either requires full access an indexer which provides all the intermediate transactions and requires quering Mithril aggregator for all the transactions.
+ * Or requires a trusted indexer so cardano node as well.
 
-        * Or requires a trusted indexer so cardano node as well.
+##### 2. Identifier at the datum level
 
-    * Identifier on the datum level. Proving:
+Proving :
+ * Requires similar types of queries as the above which prove that the UTxO is really connected to the initial UTxO.
+      
+##### 3. Identifier at the `Value` level 
 
-        * Requires similar types of queries as the above which prove that the UTxO is really connected to the initial UTxO.
+it is minted using unique and safe policy. Proving:
+ * Current Mithril API:
+   * The last transaction body required from untrusted source.
+     * Query to the existing Mithril transaction API (by hash) proves validity of that transaction and possibly past state of the channel.cardano
+     * Combined with query about the recent certified block it can actually give short lived off-chain guarantees about the channel state.
 
-    * Identifier of the `Value` level which is minted using unique and safe policy. Proving:
-
-        * Current Mithril API:
-
-            * The last transaction body required from untrusted source.
-
-            * Query to the existing Mithril transaction API (by hash) proves validity of that transaction and possibly past state of the channel.cardano
-
-            * Combined with query about the recent certified block it can actually give short lived off-chain guarantees about the channel state.
-
-        * Light wallet Mithril API (the latest Mithril design discussion: https://github.com/input-output-hk/mithril/discussions/1273):
-
-            * Given known script address we can query the Mithril for the UTxOs at address which should be 
-
-            * The above query can be really inefficient and return massive results (UTxOs for all the open channels). We can narrow the query by using unique staking part per channel.
+   * Light wallet Mithril API (the latest Mithril design discussion: https://github.com/input-output-hk/mithril/discussions/1273):
+     * Given known script address we can query the Mithril for the UTxOs at address which should be 
+     * The above query can be really inefficient and return massive results (UTxOs for all the open channels). We can narrow the query by using unique staking part per channel.
 
 ## Thread Token
 

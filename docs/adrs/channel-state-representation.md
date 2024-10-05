@@ -6,36 +6,36 @@ Status: Draft
 
 There are multiple approaches which we can accomodate in order to exchange commitments and track the channel state:
 
-* `SimpleCheque` - plain and cummulative single direction payments:
+- `SimpleCheque` - plain and cummulative single direction payments:
 
-    ```typescript
-    type SimpleCheque = {
-        // ever increasing payment
-        payment: bigint;
-    }
-    ```
+  ```typescript
+  type SimpleCheque = {
+    // ever increasing payment
+    payment: bigint;
+  };
+  ```
 
-* `LossPreventingCheque` - cheques with loss prevention mechanism:
+- `LossPreventingCheque` - cheques with loss prevention mechanism:
 
-    ```typescript
-    type LossPreventingCheque = {
-        // ever increasing payment
-        payment: bigint;
-        // the highest last cheque from the counterparty
-        payback: bigint;
-    }
-    ```
+  ```typescript
+  type LossPreventingCheque = {
+    // ever increasing payment
+    payment: bigint;
+    // the highest last cheque from the counterparty
+    payback: bigint;
+  };
+  ```
 
-* `Snapshot` - snapshot of the state which is indexed:
+- `Snapshot` - snapshot of the state which is indexed:
 
-    ```typescript
-    type Snapshot = {
-        // ever increasing id
-        id: bigint;
-        // a transfer vector between the two accounts
-        transfer: bigint;
-    }
-    ```
+  ```typescript
+  type Snapshot = {
+    // ever increasing id
+    id: bigint;
+    // a transfer vector between the two accounts
+    transfer: bigint;
+  };
+  ```
 
 ## Cashouts
 
@@ -45,9 +45,9 @@ Because consensus will loook in every case the same - just a final balance signe
 
 There are few interesting properties of this scheme:
 
-* Unbounded loss - an inactive party can be serverily penalized if it does not respond during closure.
-* Unidirectionality - only a single party has to sign the intention.
-* Possibly huge integer values - this can have slight impact on the ledger costs.
+- Unbounded loss - an inactive party can be serverily penalized if it does not respond during closure.
+- Unidirectionality - only a single party has to sign the intention.
+- Possibly huge integer values - this can have slight impact on the ledger costs.
 
 Conrecte unbounded loss example:
 
@@ -112,15 +112,14 @@ Beside the difference in size (`Snapshot` can be smaller in size than `LossPreve
 
 Few observations:
 
-* In the case of single signed snapshots party `A` should only provide snapshots signed by `B` because `A` can submit arbitrary snapshot signed by `A` which is impossible to contest (?) by `B` (everyone can sign their own arbitrary snapshots).
+- In the case of single signed snapshots party `A` should only provide snapshots signed by `B` because `A` can submit arbitrary snapshot signed by `A` which is impossible to contest (?) by `B` (everyone can sign their own arbitrary snapshots).
 
-* Because of the above `Provider` is not able to submit the last snapshot signed by himself.
+- Because of the above `Provider` is not able to submit the last snapshot signed by himself.
 
-* This submission should not be penalized if `Consumer` actually had provided the last snapshot signed by the `Provider`.
+- This submission should not be penalized if `Consumer` actually had provided the last snapshot signed by the `Provider`.
 
 ### Full Consensus Signing
 
-
 ## Pending payments
 
-In the context of composition of channels and pending payments it seems really beneficial to use  
+In the context of composition of channels and pending payments it seems really beneficial to use

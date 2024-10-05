@@ -42,29 +42,29 @@ This separation makes it easy to reason about the system state and its safety.
 
 ## Decision
 
-* We will introduce `deposit` and `cash out` operations which can be performed during the channel lifecycle.
+- We will introduce `deposit` and `cash out` operations which can be performed during the channel lifecycle.
 
-* Cash out approval signature will be an input to the `cash out` operation.
+- Cash out approval signature will be an input to the `cash out` operation.
 
-* We add two `cash out` id(s) for each party to prevent double cash out operations.
+- We add two `cash out` id(s) for each party to prevent double cash out operations.
 
-* We will rename the `account*` to `deposit*`:
+- We will rename the `account*` to `deposit*`:
 
-    * We keep simple invariant `depositA + depositB = UTxO Value[channel asset class]`.
+  - We keep simple invariant `depositA + depositB = UTxO Value[channel asset class]`.
 
-    * Instead of introducing separate `cash out` tracking variable we will allow negative account value which represents on `L1` a cash out above the account balance. It can be interpeted from `L1` perspective as a loan from the channel partner.
+  - Instead of introducing separate `cash out` tracking variable we will allow negative account value which represents on `L1` a cash out above the account balance. It can be interpeted from `L1` perspective as a loan from the channel partner.
 
-    * The first invariant should still hold so we know that at least one account has positive balance which covers a possible loan.
+  - The first invariant should still hold so we know that at least one account has positive balance which covers a possible loan.
 
-    * When a party with negative balance performs a `deposit` it naturaly pays back the loan first because we will increase the account balance and cover the negative value as a first step.
+  - When a party with negative balance performs a `deposit` it naturaly pays back the loan first because we will increase the account balance and cover the negative value as a first step.
 
-* The party `cash out` operation will consist of few checks:
+- The party `cash out` operation will consist of few checks:
 
-    * Check of the counter party signature under the `cash out` approval.
+  - Check of the counter party signature under the `cash out` approval.
 
-    * Check if the `id` of the `cash out` is greater than the last stored `cash out` `id` for the party.
+  - Check if the `id` of the `cash out` is greater than the last stored `cash out` `id` for the party.
 
-    * Check if the optional approval deadline is not exceeded.
+  - Check if the optional approval deadline is not exceeded.
 
 ### Rationale
 

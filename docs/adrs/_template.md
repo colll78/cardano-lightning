@@ -3,7 +3,7 @@ title: "full title"
 status: proposed | accepted
 authors: "@you"
 date: 2025-01-01
-tags: 
+tags:
   - optional
 ---
 
@@ -39,6 +39,6 @@ tags:
 
 > A decision may be "proposed" if the project stakeholders haven't agreed with it yet, or "accepted" once it is agreed. If a later ADR changes or reverses a decision, it may be marked as "deprecated" or "superseded" with a reference to its replacement.
 
-## Consequences 
+## Consequences
 
 > This section describes the resulting context, after applying the decision. All consequences should be listed here, not just the "positive" ones. A particular decision may have positive, negative, and neutral consequences, but all of them affect the team and project in the future.

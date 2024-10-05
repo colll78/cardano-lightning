@@ -6,7 +6,7 @@ Let's break down a few flows of the partial cashouts to provide a context of the
 
 ### Absolute `deltaA` Value
 
-It seems handy to use  delta of a single account as a representation of the state channel. This delta represent the change of the account balance due to all of the `L2` operations up to the "current state".
+It seems handy to use delta of a single account as a representation of the state channel. This delta represent the change of the account balance due to all of the `L2` operations up to the "current state".
 
 ### `L1` Accounts
 
@@ -18,9 +18,9 @@ Negative balance indicates that a given party has a debt to the other party or t
 
 Belowe sequence presents a scenario with two alternative flow paths (`alt` blocks):
 
-  * In the first branch the `cash out` is executed and the remaining `closure` is performed after it.
+- In the first branch the `cash out` is executed and the remaining `closure` is performed after it.
 
-  * In the second branch the cash out is not executed and the closure is performed in one step.
+- In the second branch the cash out is not executed and the closure is performed in one step.
 
 Please note that the snapshot (or possibly list of cheques) which were issued during the lifetime are valid as they are because during the settlment we operate using absolute `deltaA` value.
 
@@ -35,7 +35,7 @@ Please note that the snapshot (or possibly list of cheques) which were issued du
 
   Note over L1: accountA = 100 accountB = 10
   Note over PartyA, L1: deltaA :: Int ∈ [-100, 10]
-  
+
   Note over PartyA, PartyB: deltaA = 0
 
   PartyA -->> PartyB: Cheque 30
@@ -92,7 +92,6 @@ Please note that the snapshot (or possibly list of cheques) which were issued du
 
 `Cash out`s can be considered as partial channel freeze because they represent a possible change on the `L1` layer. Channel partners should take that into account and operate on limited funds til the channel closure or up until `cash out` deadline.
 
-
 ```mermaid
  sequenceDiagram
   participant PartyA
@@ -104,7 +103,7 @@ Please note that the snapshot (or possibly list of cheques) which were issued du
 
   Note over L1: accountA = 100 accountB = 100
   Note over PartyA, L1: deltaA :: Int ∈ [-100, 100]
-  
+
   Note over PartyA, PartyB: deltaA = 0
 
   PartyB -->> PartyA: CashOutReq (50, 2024-09-15)
@@ -113,7 +112,7 @@ Please note that the snapshot (or possibly list of cheques) which were issued du
 
   Note over PartyA, PartyB: deltaA :: Int ∈ [-100, 50]
 
-  alt 2024-09-14: Partial cash out 
+  alt 2024-09-14: Partial cash out
 
     PartyB ->> L1: CashOut (50, 2024-09-15)
 

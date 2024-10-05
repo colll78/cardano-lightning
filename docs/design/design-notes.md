@@ -4,15 +4,15 @@ This is a working document hosting our current ideas about the protocols design 
 
 ## Ideas to be unpacked
 
-- multi cheque channels 
-- Proof of life payments 
+- multi cheque channels
+- Proof of life payments
 - minimum deposit
 - dynamic fees
 
 ## Components
 
-+ pwa for L2 payments 
-+ pwa for L1/L2 account management 
+- pwa for L2 payments
+- pwa for L1/L2 account management
 
 ## Design
 
@@ -20,41 +20,44 @@ This is a working document hosting our current ideas about the protocols design 
 
 #### State
 
-+ What state do participants track? 
+- What state do participants track?
 
 ```ts
 type State = {
-    latestCheque : BigInt,
-    balance: BigInt,
-    excludedCheques: BigInt[]
-}
+  latestCheque: BigInt;
+  balance: BigInt;
+  excludedCheques: BigInt[];
+};
 ```
 
-#### Constants 
+#### Constants
 
 The time each participant has to resolve their commitments on the L1
 in the case that something goes wrong.
+
 ```ts
-const L1_RESOLUTION_PERIOD = P = 24 * 60 * 60 * 1000 // Day 
+const L1_RESOLUTION_PERIOD = (P = 24 * 60 * 60 * 1000); // Day
 ```
 
 #### Datatypes
 
 A cheque commitment comes with a signed payload.
+
 ```ts
 type Payload = {
-  validUntil : Timestamp,
-  hashedSecret: ByteArray,
-}
+  validUntil: Timestamp;
+  hashedSecret: ByteArray;
+};
 ```
-These can be resolved on the L1 if there is failure to agree on the L2.
-The secret must be provided. 
 
-### L2 
+These can be resolved on the L1 if there is failure to agree on the L2.
+The secret must be provided.
+
+### L2
 
 TODO
 
-## Examples 
+## Examples
 
 ### One payment, One hop
 
@@ -70,7 +73,7 @@ TODO
   Consumer-->> Provider: Thx. Sending 10.2$
   Consumer->> Provider: Here's the 10.2$ cheque
 
-  Consumer-->> Provider: Thx. Sending another 5$ 
+  Consumer-->> Provider: Thx. Sending another 5$
   Consumer->> Provider: Here's the 15.2$ cheque
 ```
 
@@ -108,13 +111,12 @@ TODO
   Consumer->> Gateway: Here's the 10.2$ cheque
 ```
 
-#### Evil middleman 
+#### Evil middleman
 
-+ How does "Consumer" know "Gateway" is paying Provider the full fee?! 
+- How does "Consumer" know "Gateway" is paying Provider the full fee?!
 
-Provider will only reveal the secret if it matches their expectations. 
-Otherwise no money will change hands. 
-
+Provider will only reveal the secret if it matches their expectations.
+Otherwise no money will change hands.
 
 #### Evil Recipient
 
@@ -160,7 +162,8 @@ He reveals the the secret only on the L1.
   Consumer->>Gateway: ** SILENCE **
   Gateway->>L1: Cash cheque commitment with secret
 ```
-Gateway deems Consumer unreliable and my close the account. 
+
+Gateway deems Consumer unreliable and my close the account.
 
 #### No resolution on route
 
@@ -183,16 +186,17 @@ Gateway deems Consumer unreliable and my close the account.
   Gateway->>Consumer: Here's the secret
   Consumer->>Gateway: Here's the 10.2$ cheque
 ```
+
 Provider deems Gateway unreliable and closes the account.
 
-### Multi-cheque 
+### Multi-cheque
 
 We use Channels to handle mutliple unresolved cheques simultaneously.
 This prevents channels being blocked during resolution.
-Consider the case that: 
+Consider the case that:
 
 1. Consumer pays Provider via Gateway and then Dennis before resolving the first cheque.
-2. And the cheque to Provider resolves before or after Dennis. 
-3. Or the cheque to Provider fails to resolve.  
+2. And the cheque to Provider resolves before or after Dennis.
+3. Or the cheque to Provider fails to resolve.
 
 TODO

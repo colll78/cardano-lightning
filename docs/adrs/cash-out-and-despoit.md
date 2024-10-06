@@ -26,17 +26,17 @@ In the case of cash outs the situation is clearly more complex because any decre
 
 Payment hubs could significantly benefit from batching of the discussed rebalancing operations:
 
-    * Mixing charge operations and cash outs in the same L1 transaction can allow to rebalance the liquidity between channels in a more efficient way.
+- Mixing charge operations and cash outs in the same L1 transaction can allow to rebalance the liquidity between channels in a more efficient way.
 
-    * Mixing partial cash outs or full closure together with charging or initialization of the channel could be considered as well.
+- Mixing partial cash outs or full closure together with charging or initialization of the channel could be considered as well.
 
 ### L1 and L2 Separation of Concerns
 
 The core idea of Lighthing is to move as many transfers operations off-chain and compress them to a concise final state representation which should be settled down on the L1 level. This design creates pretty natural separation of concerns:
 
-    * L1 provides safety guarantees behind the liquidity which we operate on.
+- L1 provides safety guarantees behind the liquidity which we operate on.
 
-    * L2 keeps track of the "current" state inside the channel.
+- L2 keeps track of the "current" state inside the channel.
 
 This separation makes it easy to reason about the system state and its safety.
 
@@ -68,31 +68,31 @@ This separation makes it easy to reason about the system state and its safety.
 
 ### Rationale
 
-    * If we assume that the state on the L2 can be arbitrary then:
+- If we assume that the state on the L2 can be arbitrary then:
 
-      * We can consider a situation that all the assets at the moment belong to party A.
+  - We can consider a situation that all the assets at the moment belong to party A.
 
-      * If we allow party B to cash out any assets on L1 then we will have a situation where the L2 state can not be settled on L1 any more.
+  - If we allow party B to cash out any assets on L1 then we will have a situation where the L2 state can not be settled on L1 any more.
 
-      So it seems that without operational restriction of the L2 we can not allow cash outs without counter party approval.
+  So it seems that without operational restriction of the L2 we can not allow cash outs without counter party approval.
 
-    * Let's consider an L2 snapshot:
+- Let's consider an L2 snapshot:
 
-      * The smart contract has no way to instantly verify that a plain L2 snapshot is the latest one. Even if both parties agreed on it at some point in time it can be invalidated by the later state.
+  - The smart contract has no way to instantly verify that a plain L2 snapshot is the latest one. Even if both parties agreed on it at some point in time it can be invalidated by the later state.
 
-      * We could consider freezing of the L2 state. In such a case snapshots could be considered "fresh" up until the moment of some validity deadline.
+  - We could consider freezing of the L2 state. In such a case snapshots could be considered "fresh" up until the moment of some validity deadline.
 
-      * Freezing the whole channel seems unnecessarily restrictive when we want to cash out only a part of the channel capacity.
+  - Freezing the whole channel seems unnecessarily restrictive when we want to cash out only a part of the channel capacity.
 
 Given the above properties it seems pretty natural to introduce "partial freeze" which we call `cashout approval`. It is a signature under an amount and an optional deadline which can be used to approve a cash out operation on L1:
 
-    * Up until the deadline the amount of the money should be considered as "frozen" and can not be used for further operations on L2.
+- Up until the deadline the amount of the money should be considered as "frozen" and can not be used for further operations on L2.
 
-    * If the cash out is not performed until the deadline then the approval can be considered as expired and the funds can be used again.
+- If the cash out is not performed until the deadline then the approval can be considered as expired and the funds can be used again.
 
-    * The approval can be used only once.
+- The approval can be used only once.
 
-    * An approval can be updated by preserving the `id` and increasing or preserving the deadline or the amount.
+- An approval can be updated by preserving the `id` and increasing or preserving the deadline or the amount.
 
 ## Dissent, counter, and comments
 

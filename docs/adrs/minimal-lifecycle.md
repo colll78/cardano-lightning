@@ -17,6 +17,8 @@ on the essential parts of the L1 component - the MVP.
 
 ### Overview
 
+#### Preamble
+
 CL is a network.
 
 Users of the network are **participants** and form the nodes of the graph of the
@@ -25,7 +27,7 @@ network.
 A **channel** is an edge to the network connecting two participants. A channel
 compromises of state and actions that happen both on-chain and off-chain.
 
-On-chain, A channel is represented by utxos, at most one at tip at any one time.
+On-chain, a channel is represented by utxos, at most one at tip at any one time.
 While such a utxo exists at tip, the channel is **staged** (see 'stages' below).
 After the utxo is spent and not replaced, the channel is **unstaged**. A channel
 that is unstaged will never again be staged. Unless otherwise specified,
@@ -46,66 +48,67 @@ The term step is used both to refer to a specific event, or a general family of
 events. For example: "this transaction steps that channel", and "an 'open' is
 the initial step of a channel".
 
-A staged channel will be at a **stage** in its life cycle.
-
-The **opened** stage is the main stage of the channel. During this stage
-participants are actively transacting with each other off-chain.
-
-The **closed** stage is the stage following opened. The stage occurs once one of
-the participants no longer wants to continue the channel.
-
-The **resolved** stage follows the closed stage. The stage occurs once both
-participants have communicated to the L1 the conclusion of their off-chain
-transacting. This is the final stage, and afterwards the channel is unstaged.
-
+A staged channel will be at a **stage** in its life-cycle.
 A step may:
 
 - stage or unstage a channel,
 - take a channel from a stage to the same stage, or
 - take a channel from one stage to the next stage
 
+#### Stages and steps
+
 ```mermaid
 ---
-title: Minimal channel life-cycle diagram
+title: Minimal channel life-cycle diagram in stages and steps
 ---
 stateDiagram-v2
     [*] --> Opened : open
+    Opened --> Opened : add
     Opened --> Closed : close
     Closed --> Resolved : resolve
     Resolved --> [*] : end
-    Closed --> [*] : drain
+    Closed --> Elapsed : elapse
+    Elapsed --> [*] : recover
 ```
 
-The **open** stages the channel to its opened stage. The participant locks funds
-that they wish to back their off-chain transacting. The two participants can now
-safely transact off-chain.
+Nodes are stages; arrows are steps.
 
-The **close** steps the channel from opened to closed. When one of the
-participants of the channel no longer wishes to continue the arrangement they
-initiate a close. Within this step the participant provides a summary of the
-off-chain transacting.
+One participant initiates an **open** step.
+This stages a channel into its **opened** stage.
+This is the main stage of the channel.
+In the open step the participant locks funds at the utxo as guarantee of their off-chain transacting.
+During this stage participants are actively transacting with each other off-chain.
 
-The **resolve** steps the channel from closed to resolved. This is initiated by
-the other participant, and is when they provide their summery of the off-chain
-transacting. The L1 now has both participants version, and can establish how
-much this participant is owed. The transaction associated to the step will see
-the appropriate amount of funds unlocked from the channel.
+While the channel is opened, either participant may perform an **add** step.
+This does not change the stage of the channel.
+There is no limit to how many add steps can be performed.
+The participant locks more funds in the channel as further guarantee of their off-chain transacting.
 
-The **end** unstages the channel from a resolved stage. This is initiated by the
-same participant who initiated the close. The remaining funds are unlocked.
+Once a participant no longer wishes to continue the arrangement
+they perform a **close** step.
+The channel is now **closed**.
+In the close the participant includes a summary of their off-chain transacting.
+They should no longer be transacting off-chain beyond this point.
+The time window for the other participant to provide their summary begins.
+There are two possible next steps.
 
-The **drain** unstages the channel from a closed stage. This is initiated by the
-same participant who initiated the close. This can happen if the other
-participant has not resolved the channel within some predetermined time window.
-The remaining funds are unlocked.
+The other participant is able to perform a **resolve** step.
+They provide their summary to the L1, and can then unlock the funds they are due.
+The channel is now in the **resolved** stage.
 
-Note: This is a simplification that limits the symmetric-ness of a CL channel.
-We are presenting the steps as unilateral actions by one or other participants.
-That is, a step is performed by one party without the need for collaboration
-with the other party. However, in the above there is no way for the other
-participant to also add funds to the channel. For the scope of this document we
-will not explore the mooted `add` step that would allow this, nor collaborative
-transaction building (eg a-la-bitcoin).
+From the resolved stage, the participant that performed the close
+can finally **end** the channel. In doing, the channel is unstaged
+and all remaining funds are unlocked.
+
+Alternatively, the participant who performed the close step
+may perform an **elapse** step.
+This is valid only after the aforementioned time window has elapsed
+without the other participant performing a resolve.
+The step allows the participant to unlock the funds they demonstrated they were due.
+The channel is now in the **elapsed** stage.
+
+From the elapsed stage, the other participant can perform a **recover** step.
+This unstages the channel and unlocks the remaining funds.
 
 ### Rationale
 
@@ -113,9 +116,13 @@ transaction building (eg a-la-bitcoin).
 
 ### Comments
 
+#### Less than a spec
+
 This document does not aspire to be detailed enough to be considered a spec. It
 is two establish the key terms and entities so that future discussions start
 with a shared vocabulary.
+
+#### Motivating terms
 
 Bitcoin Lightning inspires the use of the term 'close'. Beyond this, the framing
 is in terms of partially built transactions, rather the channel life-cycle.
@@ -125,13 +132,37 @@ ends in between good enough and not bad. No terms borrowed from English will
 perfectly fit the precise shape of their employment in technical contexts like
 here.
 
-### Considered Alternatives
-
-Just a few notes:
+Some considered alternatives
 
 - live/dead for opened/closed. Sounded to zombie-esque.
 - phases for stages: the latter has stronger connotations of direction.
 
+#### Minimality
+
+A mutual close is not essential for a complete life-cycle.
+This will be left for a future ADR.
+The add step will also be left for a future ADR.
+
+It's been mooted that close includes the approved output address.
+
+#### Unilateral-ness
+
+The steps chosen are unilateral actions - they do not require any cooperation between the participants.
+Moreover the steps chosen expect a participant to look after only their own funds.
+The script is present to keep both participants safe.
+
+For example, we could have chosen that the resolve step unstages the channel,
+and that the script ensures that both participants receive the funds they are due.
+This is feasible and in some sense simpler, with respect to fewer steps.
+However, it introduces additional complexities into the script.
+Naively implemented, it would introduce the potential of double satisfaction attacks.
+
+We may revisit this in future.
+
+### Considered Alternatives
+
+\-
+
 ## Consequences
 
-n/a
+\-

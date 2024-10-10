@@ -27,6 +27,9 @@
             programs = {
               prettier = {
                 enable = true;
+                settings = {
+                  printWidth = 80;
+                };
               };
             };
           };

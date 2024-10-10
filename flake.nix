@@ -29,6 +29,7 @@
                 enable = true;
                 settings = {
                   printWidth = 80;
+                  proseWrap = "always";
                 };
               };
             };

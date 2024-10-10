@@ -48,8 +48,7 @@ The term step is used both to refer to a specific event, or a general family of
 events. For example: "this transaction steps that channel", and "an 'open' is
 the initial step of a channel".
 
-A staged channel will be at a **stage** in its life-cycle.
-A step may:
+A staged channel will be at a **stage** in its life-cycle. A step may:
 
 - stage or unstage a channel,
 - take a channel from a stage to the same stage, or
@@ -73,39 +72,36 @@ stateDiagram-v2
 
 Nodes are stages; arrows are steps.
 
-One participant initiates an **open** step.
-This stages a channel into its **opened** stage.
-This is the main stage of the channel.
-In the open step the participant locks funds at the utxo as guarantee of their off-chain transacting.
-During this stage participants are actively transacting with each other off-chain.
+One participant initiates an **open** step. This stages a channel into its
+**opened** stage. This is the main stage of the channel. In the open step the
+participant locks funds at the utxo as guarantee of their off-chain transacting.
+During this stage participants are actively transacting with each other
+off-chain.
 
 While the channel is opened, either participant may perform an **add** step.
-This does not change the stage of the channel.
-There is no limit to how many add steps can be performed.
-The participant locks more funds in the channel as further guarantee of their off-chain transacting.
+This does not change the stage of the channel. There is no limit to how many add
+steps can be performed. The participant locks more funds in the channel as
+further guarantee of their off-chain transacting.
 
-Once a participant no longer wishes to continue the arrangement
-they perform a **close** step.
-The channel is now **closed**.
-In the close the participant includes a summary of their off-chain transacting.
-They should no longer be transacting off-chain beyond this point.
-The time window for the other participant to provide their summary begins.
-There are two possible next steps.
+Once a participant no longer wishes to continue the arrangement they perform a
+**close** step. The channel is now **closed**. In the close the participant
+includes a summary of their off-chain transacting. They should no longer be
+transacting off-chain beyond this point. The time window for the other
+participant to provide their summary begins. There are two possible next steps.
 
-The other participant is able to perform a **resolve** step.
-They provide their summary to the L1, and can then unlock the funds they are due.
-The channel is now in the **resolved** stage.
+The other participant is able to perform a **resolve** step. They provide their
+summary to the L1, and can then unlock the funds they are due. The channel is
+now in the **resolved** stage.
 
-From the resolved stage, the participant that performed the close
-can finally **end** the channel. In doing, the channel is unstaged
-and all remaining funds are unlocked.
+From the resolved stage, the participant that performed the close can finally
+**end** the channel. In doing, the channel is unstaged and all remaining funds
+are unlocked.
 
-Alternatively, the participant who performed the close step
-may perform an **elapse** step.
-This is valid only after the aforementioned time window has elapsed
-without the other participant performing a resolve.
-The step allows the participant to unlock the funds they demonstrated they were due.
-The channel is now in the **elapsed** stage.
+Alternatively, the participant who performed the close step may perform an
+**elapse** step. This is valid only after the aforementioned time window has
+elapsed without the other participant performing a resolve. The step allows the
+participant to unlock the funds they demonstrated they were due. The channel is
+now in the **elapsed** stage.
 
 From the elapsed stage, the other participant can perform a **recover** step.
 This unstages the channel and unlocks the remaining funds.
@@ -139,23 +135,23 @@ Some considered alternatives
 
 #### Minimality
 
-A mutual close is not essential for a complete life-cycle.
-This will be left for a future ADR.
-The add step will also be left for a future ADR.
+A mutual close is not essential for a complete life-cycle. This will be left for
+a future ADR. The add step will also be left for a future ADR.
 
 It's been mooted that close includes the approved output address.
 
 #### Unilateral-ness
 
-The steps chosen are unilateral actions - they do not require any cooperation between the participants.
-Moreover the steps chosen expect a participant to look after only their own funds.
-The script is present to keep both participants safe.
+The steps chosen are unilateral actions - they do not require any cooperation
+between the participants. Moreover the steps chosen expect a participant to look
+after only their own funds. The script is present to keep both participants
+safe.
 
 For example, we could have chosen that the resolve step unstages the channel,
-and that the script ensures that both participants receive the funds they are due.
-This is feasible and in some sense simpler, with respect to fewer steps.
-However, it introduces additional complexities into the script.
-Naively implemented, it would introduce the potential of double satisfaction attacks.
+and that the script ensures that both participants receive the funds they are
+due. This is feasible and in some sense simpler, with respect to fewer steps.
+However, it introduces additional complexities into the script. Naively
+implemented, it would introduce the potential of double satisfaction attacks.
 
 We may revisit this in future.
 

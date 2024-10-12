@@ -21,6 +21,20 @@ Settlement times can vary on both chains, but are >10s.
 Cardano has a much more powerful scripting language.
 This is likely the most important distinction between the two chains
 with respect to our current focus.
+
+### Bitcoin Script vs Plutus
+There are two significant differnces between spending validators on Bitcoin and on Cardano:
+
+* The languages differ regarding the computational power - Plutus is Turing complete but Bitcoin Script is not.
+* What is also important is the difference between these validators execution contexts:
+  * On Bitcoin we have limited access to the information contained in the transaction
+  * On Cardano we can examine the whole transaction together with the outputs. This gives the validator ability to guarantee correct token distribution or its own continuation
+
+A pretty amazing and surprising fact is that Bitcoin Lightning protocol shifts a lot of state validation to the offchain processing. In other words - it is not the script itself who checks whether users are progressing according to the rules but rather the users validate the transactions and either agree by providing signature under the new state or not.
+Of course even on Cardano where scripts can check more invariants users still have to think and verify what are they signing but we can try to make it a bit harder to inroduce human or application programmer error.
+On the other hand BLN proofs that making the transaction validation an external off-chain proess can be actually really efficient because the resource consumption on the chain is minimized.
+
+
 TODO: compare Plutus and Bitcoin Script
 
 There many other possible points of comparison
@@ -83,3 +97,10 @@ to periodically reallocate funds from channels with customers who own funds to c
 And to do so without closing, and re-opening a channel.
 
 TODO: Check / Complete
+
+### HTLC
+BLN uses really cool way to compose the channels and make payment accross them safe and atomic. This mechanism is called HTLC
+
+Every lock is encoded as UTxO which is crazy optimal (483 UTxOs can be outputed)
+
+Bitcoin encodes every payment which awaits confirmation (`payment_secret`) to release assets as UTxO. This represetnatation

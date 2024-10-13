@@ -5,6 +5,12 @@ attendees:
   - "@waalge"
 ---
 
+## Agenda
+
+<!-- || - [ ] ({{PROPOSER}} -)? {{DESCRIPTION}} -->
+
+- [ ] Review of the last meeting's actionables
+
 ## Actionables
 
 <!-- || - [ ] {{OWNER}} - {{DEADLINE}} - {{DESCRIPTION}} -->

@@ -1,5 +1,5 @@
 ---
-title: "minimal channel life-cycle"
+title: "minimal channel lifecycle"
 status: proposed
 authors: "@waalge"
 date: 2024-10-06
@@ -9,15 +9,15 @@ tags:
 
 ## Context
 
-CL needs a starting point. We propose the minimal life-cycle, establishing
-fundamental components and introducing the vocab. This is predominantly focused
-on the essential parts of the L1 component - the MVP.
+CL needs a starting point. We propose the minimal lifecycle.
+
+This ADR introduces fundamental components and vocab. It is focussed only on
+what is essential to the L1 component so that a channel is safe functional and
+safe. It is not concerned with any nice-to-haves, or efficiency.
 
 ## Decision
 
-### Overview
-
-#### Preamble
+### Preamble
 
 CL is a network.
 
@@ -48,17 +48,17 @@ The term step is used both to refer to a specific event, or a general family of
 events. For example: "this transaction steps that channel", and "an 'open' is
 the initial step of a channel".
 
-A staged channel will be at a **stage** in its life-cycle. A step may:
+A staged channel will be at a **stage** in its lifecycle. A step may:
 
 - stage or unstage a channel,
 - take a channel from a stage to the same stage, or
 - take a channel from one stage to the next stage
 
-#### Stages and steps
+### Channel lifecycle
 
 ```mermaid
 ---
-title: Minimal channel life-cycle diagram in stages and steps
+title: Minimal channel lifecycle diagram in stages and steps
 ---
 stateDiagram-v2
     [*] --> Opened : open
@@ -108,6 +108,8 @@ This unstages the channel and unlocks the remaining funds.
 
 ### Rationale
 
+\-
+
 ## Discussion, Counter and Comments
 
 ### Comments
@@ -121,7 +123,7 @@ with a shared vocabulary.
 #### Motivating terms
 
 Bitcoin Lightning inspires the use of the term 'close'. Beyond this, the framing
-is in terms of partially built transactions, rather the channel life-cycle.
+is in terms of partially built transactions, rather the channel lifecycle.
 
 Other vocab was discussed. Choosing terms is a game of compromise that hopefully
 ends in between good enough and not bad. No terms borrowed from English will
@@ -135,7 +137,7 @@ Some considered alternatives
 
 #### Minimality
 
-A mutual close is not essential for a complete life-cycle. This will be left for
+A mutual close is not essential for a complete lifecycle. This will be left for
 a future ADR. The add step will also be left for a future ADR.
 
 It's been mooted that close includes the approved output address.

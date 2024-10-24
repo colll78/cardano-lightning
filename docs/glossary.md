@@ -37,6 +37,11 @@ The fundamental link between two [participants](#participant) in the CL network.
 A channel (that [staged](#staged)) consists state on both the L1 and L2. It
 includes two accounts, one for each participant.
 
+### cheque
+
+An object exchanged on the L2 and used on the L1 to prove what funds are owed.
+(TODO: clarify.)
+
 ### close
 
 A [step](#step) that changes the [stage](#stage) from [opened](#opened) to
@@ -47,6 +52,11 @@ to end the [channel](#channel).
 
 The second [stage](#stage). It occurs after a [close](#close) step. The
 participants are no longer transacting off-chain (at least for long).
+
+### currency
+
+In relation to a [channel](#channel), the asset class which is being exchanged.
+The default currency is ada.
 
 ### elapse
 
@@ -68,15 +78,16 @@ their funds.
 
 ### funds
 
-The preferred term for assets in the channel that are locked as collateral on
-the L1. Use the term 'funds' over alternatives such as 'value', 'assets',
-'tokens', _etc_.
+The preferred term for amount of assets in the channel that are locked as
+collateral on the L1. Use the term 'funds' over alternatives such as 'value',
+'assets', 'tokens', _etc_.
 
-### life-cycle
+### lifecycle
 
-In relation to a [channel](#channel), it is the series of [steps](#step). (This
-term is include mainly to document that the preferred form is as two words
-separated by a hyphen.)
+In relation to a [channel](#channel), it is the series of [steps](#step).
+
+(This term is include mainly to document that the preferred form is as a single
+word.)
 
 ### open
 
@@ -93,6 +104,11 @@ stage, the [participants](#participant) are transacting off-chain.
 
 Anyone using the CL network. In relation to a [channel](#channel), there are two
 participants.
+
+### partner
+
+In relation to a [channel](#channel), a synonym for [participant](#participant).
+This is the preferred term from the bitcoin ecosystem.
 
 ### recover
 

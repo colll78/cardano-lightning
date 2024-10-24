@@ -2,13 +2,13 @@
 title: Managing the multisig wallet
 ---
 
-For managing project funds we use a multisig wallet.
-There are some internal helpers for managing this.
+For managing project funds we use a multisig wallet. There are some internal
+helpers for managing this.
 
 ## Cutting The Pie
 
-This is a simple tool for creating wallets and mutlisig scripts and txs.
-Note, access to a cardano node is required to build and submit txs.
+This is a simple tool for creating wallets and mutlisig scripts and txs. Note,
+access to a cardano node is required to build and submit txs.
 
 Example flow:
 
@@ -18,8 +18,8 @@ Example flow:
 alias ctp="repo/root/bin/cut-the-pie.py"`
 ```
 
-- `ctp create-wallet` generates a signing key and derives public keys and addresses (mainnet and testnet) from it.
-  Create a bunch of participants:
+- `ctp create-wallet` generates a signing key and derives public keys and
+  addresses (mainnet and testnet) from it. Create a bunch of participants:
 
 ```bash
 ctp create-wallet -o wallet-1
@@ -74,7 +74,9 @@ Outputs
 }
 ```
 
-- The generated address is derived from the scripthash for both payment and staking credentials. Note 1 byte header `30` and repeated 28 bytes ending with `8988`:
+- The generated address is derived from the scripthash for both payment and
+  staking credentials. Note 1 byte header `30` and repeated 28 bytes ending with
+  `8988`:
 
 ````sample
 $ cat ~/multi-sig/addr_test.pay | bech32
@@ -87,7 +89,8 @@ $ cat ~/multi-sig/addr_test.pay
 addr_test1xzm0y3fgs7eh2nl3kwa8ykyd5qeptd2srl4vtmxw9kkgnz9k7fzj3panw48lrva6wfvgmgpjzk64q8l2chkvutdv3xyqfw2auw
 ````
 
-- As an example let's assume that we have some UTxO which is locked at our multi-sig (2 out of 3) address and which we want to spend:
+- As an example let's assume that we have some UTxO which is locked at our
+  multi-sig (2 out of 3) address and which we want to spend:
 
 ```bash
 cardano-cli query utxo \
@@ -139,8 +142,8 @@ cardano-cli transaction submit --testnet-magic 1 --tx-file tx-signed-1.raw
 Command failed: transaction submit  Error: Error while submitting tx: ShelleyTxValidationError ShelleyBasedEraBabbage (ApplyTxError (UtxowFailure (AlonzoInBabbageUtxowPredFailure (ShelleyInAlonzoUtxowPredFailure (ScriptWitnessNotValidatingUTXOW (fromList [ScriptHash "b6f2452887b3754ff1b3ba72588da03215b5501feac5ecce2dac8988"])))) :| []))
 ```
 
-- The output file is given to a second user/wallet/participant
-  who is then able to sign and submit it.
+- The output file is given to a second user/wallet/participant who is then able
+  to sign and submit it.
 
 ```bash
 cardano-cli transaction sign \

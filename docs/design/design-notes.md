@@ -1,6 +1,7 @@
 # Cardano Lightning : Design notes
 
-This is a working document hosting our current ideas about the protocols design and features.
+This is a working document hosting our current ideas about the protocols design
+and features.
 
 ## Ideas to be unpacked
 
@@ -32,8 +33,8 @@ type State = {
 
 #### Constants
 
-The time each participant has to resolve their commitments on the L1
-in the case that something goes wrong.
+The time each participant has to resolve their commitments on the L1 in the case
+that something goes wrong.
 
 ```ts
 const L1_RESOLUTION_PERIOD = (P = 24 * 60 * 60 * 1000); // Day
@@ -50,8 +51,8 @@ type Payload = {
 };
 ```
 
-These can be resolved on the L1 if there is failure to agree on the L2.
-The secret must be provided.
+These can be resolved on the L1 if there is failure to agree on the L2. The
+secret must be provided.
 
 ### L2
 
@@ -115,13 +116,13 @@ TODO
 
 - How does "Consumer" know "Gateway" is paying Provider the full fee?!
 
-Provider will only reveal the secret if it matches their expectations.
-Otherwise no money will change hands.
+Provider will only reveal the secret if it matches their expectations. Otherwise
+no money will change hands.
 
 #### Evil Recipient
 
-As before but Provider doesn't play nice.
-He reveals the the secret only on the L1.
+As before but Provider doesn't play nice. He reveals the the secret only on the
+L1.
 
 ```mermaid
  sequenceDiagram
@@ -191,11 +192,11 @@ Provider deems Gateway unreliable and closes the account.
 
 ### Multi-cheque
 
-We use Channels to handle mutliple unresolved cheques simultaneously.
-This prevents channels being blocked during resolution.
-Consider the case that:
+We use Channels to handle mutliple unresolved cheques simultaneously. This
+prevents channels being blocked during resolution. Consider the case that:
 
-1. Consumer pays Provider via Gateway and then Dennis before resolving the first cheque.
+1. Consumer pays Provider via Gateway and then Dennis before resolving the first
+   cheque.
 2. And the cheque to Provider resolves before or after Dennis.
 3. Or the cheque to Provider fails to resolve.
 

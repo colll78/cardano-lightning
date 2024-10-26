@@ -1,169 +1,194 @@
-Status: Draft; Early stage; Loose notes
+---
+title: "Channel identification"
+status: proposed
+authors: "@paluh"
+date: 2024-10-24
+tags:
+  - l1
+---
 
-Description: If and how channels should be identified on the chain.
+## Context
 
-# Channel Idetnification
+The [minimal lifecycle](./minimal-lifecycle.md) implies some state of a channel is kept on-chain. 
+The assumption is that a channel is represented on the L1 by a single utxo. 
 
-## Channel identification - what is the purpose
+A channel must be identifiable for:
 
-- In the case of CL we can not rely on static UTxO to represent the channel
-  uniquely because the channel could evolve and "move" to a different UTxO.
+- off-chain:
+  - participants following own channels' state eg watch for a close step
+  - for participants with different levels of L1 connectivity, from all history to only via Mithril
+- on-chain: 
+  - finding continuing input
+  - verifying that a cheque corresponds to the given channel
+  - interacting with another script
 
-- Identifier allows information exchange between direct parties about state
-  transition using a constant value.
+A utxo has four attributes: address, value, datum, reference script.
+The latter two are optional.
 
-- The on-chain code can use id to simplify the transition checks (output UTxO).
+With regards to the address, the payment credential of the address must be a script enforcing the CL logic.
+The staking credentials are of concern only when the currency is Ada. 
+We leave this as an open question for now. 
 
-- Interaction with any other script which wants to access channel state
-  information (probably the closing one) can be simplified though using current
-  design it will be non trivial and require the other script inclusion in the
-  final tx.
+For the channel utxo, the reference script must be `None`. 
+Although this is a decision - it seems self evident that this should be the case.
 
-### Identification on the chain
+We also take it as assumed that the datum is used and is inline.
 
-As suggested above identification of the channel instance on the chain can be
-achieved using different ways but it can require different client capabilites in
-order to use and verify it.
+The question is 
 
-#### Different types of clients
+> how should channels be identified
 
-We should probably consider at least the following types of clients:
+## Decision
 
-- Clients which have acceess to the full blockchain history or an interesting
-  subset of it.
+A channel is identified by its thread token.
 
-- Clients which have access to some certified verification source like Mithril
+### Overview
 
-- Clients which have access to untrusted source of history but which can perform
-  some verification using the certified source.
+The thread token is an NFT. 
+The token's script is the same as that of the payment credentials. 
+The token name is
 
-From CL protocol adoption perspective the more nodes can operate using the
-second or third model the better.
+```rs
+let name = "⚡" + cid
+```
 
-#### Different types of identification
+where 
 
-We can use at least 3 approaches to identify channels:
+- `cid = blake2b_224 seed`
+- `seed` is the oref of some input spent in the mint.
 
-##### 1. No direct identifier
 
-channel instance is associated with the initial UTxO and the client folds the
-contract thread. In order to operate safely:
+The thread token never leaks from the thread and that it is burned in an unstaging step.
 
-- Either requires full access an indexer which provides all the intermediate
-  transactions and requires quering Mithril aggregator for all the transactions.
-- Or requires a trusted indexer so cardano node as well.
+### Rationale
 
-##### 2. Identifier at the datum level
+The thread token is relatively old design pattern. 
+It seems to be favoured by (some) auditors, on the grounds that it is easier to reason about 
+that alternatives.
 
-Proving :
-
-- Requires similar types of queries as the above which prove that the UTxO is
-  really connected to the initial UTxO.
-
-##### 3. Identifier at the `Value` level
-
-it is minted using unique and safe policy. Proving:
-
-- Current Mithril API:
-
-  - The last transaction body required from untrusted source.
-
-    - Query to the existing Mithril transaction API (by hash) proves validity of
-      that transaction and possibly past state of the channel.cardano
-    - Combined with query about the recent certified block it can actually give
-      short lived off-chain guarantees about the channel state.
-
-  - Light wallet Mithril API (the latest Mithril design discussion:
-    https://github.com/input-output-hk/mithril/discussions/1273):
-    - Given known script address we can query the Mithril for the UTxOs at
-      address which should be
-    - The above query can be really inefficient and return massive results
-      (UTxOs for all the open channels). We can narrow the query by using unique
-      staking part per channel.
-
-## Thread Token
-
-### Do we want it?
+TODO: rework the below. 
 
 - It is hard to imagine direct incentiviced attack on a single channel when both
-  parties know and track the exact state of the channel by performing L1
-  queries.
-
+parties know and track the exact state of the channel by performing L1
+queries.
 - It is probably more probable that some form of incentivized attack can be
-  performed when we imagine payment operators - some security attacks can depend
-  on confusion and weakness of the sofware behind it.
+performed when we imagine payment operators - some security attacks can depend
+on confusion and weakness of the sofware behind it.
 
-## Do we need it?
-
-Clearly not. We could avoid any identification
-
-## Main objectives
-
-- Introduce unforgeable identifier on-chain.
-
-- Introduce precondition checking on-chain.
-
-## Main side effects
-
-### Pros
+#### Pros
 
 - Simplify off-chain validity checks - single script hash determines `Value`,
-  `Datum` and `Script` consistency. This can have an minimal impact on indexers
-  performance.
+`Datum` and `Script` consistency. This can have an minimal impact on indexers
+performance.
 
 - Removes ambiguity - uniquness is a guaranteed invariant. This simplifies not
-  only indexers but other software as well.
+only indexers but other software as well.
 
 - Simplify on-chain contract preservation checks (continuing UTxO
-  identification) - useful in both singleton and batch mode.
+identification) - useful in both singleton and batch mode.
 
-### Cons
+#### Cons
 
 - Makes Hydra integration a bit harder. If we require presence of a unique token
-  per channel then we could:
-
+per channel then we could:
   - Mint a unique one based on randomness commitments (both parties provide
     signed hashes of "random" numbers)
-
   - We compute the final value from xoring the preimiges
-
   - We store the commitmets in the state
-
   - We use the commitments to recompute the token when performing the minting
     during the settlment of the channel on the L1 in the case when Hydra head is
     closed before the CL channel is closed.
 
-## Design
 
-- The same validator mints tokens and is used as channel validator (using
-  `CIP-0069`).
+## Discussion, Counter and Comments
 
-- The same validator is be used for batching (rewarding) as well.
+### Considered Alternatives
 
-- Initial minting implements additional precondition checking of all the channel
-  outputs (`UTxO` `Value` level vs `Datum`).
+#### No cid
 
-- Minting introduces token which can be :
+Channel is associated with the initial UTxO and the client folds the contract thread. 
 
-  - Either based on the output UTxO and use its reference hash
-    (`sha256(TxId <> Index)`). This hides the details about the original UTxO
-    info which should be provided separately if needed.
+In order to operate safely:
 
-  - It can kee the full `UTxO` reference: token name (max 32 bytes) could encode
-    TxId (32 bytes) and amount of that token in the output could encode the
-    index of the UTxO.
+- requires full access an indexer which provides all the intermediate
+  transactions and requires querying Mithril aggregator for all the transactions, OR
+- requires a trusted indexer so cardano node as well.
 
-- Token in one form or the other is used as `ChannelId`.
+Advantages: 
 
-- We can avoid redundancy on `Value` and `Datum` level and assume that channel
-  `UTxO` can contain only three types of values:
+- trivial hydra compat (no token)
 
-  - Either `(min ADA`, Thread token, Channel asset)
+Disadvantages: 
 
-  - or `(ADA, Thread token)` when `ADA` is the channel asset
+- Off-chain tracking is much more complicated/ expensive: 
+Requires history, rather than just tip.
+- Seems to shift complexity onto cheques and cheque handling
+- Depending on other design decisions, has implications for key reuse
 
-- We guarnatee that token never leaks from the thread and that it is burned at
-  during the closure.
+#### cid via pubkeys
+
+The channel l1 already requires recording the pubkeys of the partners.
+These must be stored in the datum. 
+These could be used, eg concatenated or concatenated and hashed, to form a `cid`. 
+
+Advantages: 
+
+- trivial hydra compat (no token)
+
+Disadvantages:
+
+- Allows channel spoofing
+- A pair of keys can only be used safely in a single instance
+
+#### cid via datum
+
+The `cid` is part of the datum. 
+All steps require the persistence of at least some of the datum.
+The `cid` would be another field which is checked to persist. 
+
+Advantages: 
+
+- trivial hydra compat (no token)
+
+Disadvantages:
+
+- Allows channel spoofing
+
+### Comments
+
+#### Hydra compat 
+
+TODO
+
+#### Mithril compat 
+
+Current Mithril API:
+
+- The last transaction body required from untrusted source.
+  - Query to the existing Mithril transaction API (by hash) proves validity of
+    that transaction and possibly past state of the channel.cardano
+  - Combined with query about the recent certified block it can actually give
+    short lived off-chain guarantees about the channel state.
+- Light wallet Mithril API (the latest Mithril design discussion:
+  https://github.com/input-output-hk/mithril/discussions/1273):
+  - Given known script address we can query the Mithril for the UTxOs at
+    address which should be
+  - The above query can be really inefficient and return massive results
+    (UTxOs for all the open channels). We can narrow the query by using unique
+    staking part per channel.
+
+#### Other script compat
+
+We don't yet know what this might be. 
+
+As a best guess: Its easier for other script and tool devs to
+reason about and use a thread token rather than the alt suggestions.
+
+## Consequences
+
+# FIXME
+
+## Do we need it?
 
 ## Self hash discovery
 
@@ -185,7 +210,9 @@ Clearly not. We could avoid any identification
 
 - Off-chain identification of only valid channels is trivial.
 
-- Uniquness simplifies off-chain implementations - we have guaranteed
+- Simplifies off-chain implementations
 
 - Given the above presence of such a token uniquely identifies **only** valid
   channel and it can not be forged.
+
+

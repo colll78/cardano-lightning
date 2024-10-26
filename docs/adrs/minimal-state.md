@@ -12,26 +12,33 @@ tags:
 A (staged) CL channel consists of 2 partners and a utxo at tip. We need to
 establish what information needs to be tracked and where.
 
-This minimal version follows the minimal channel lifecycle. In particular there
-is no `sub` step.
+This minimal version follows the [minimal lifecycle](./minimal-lifecycle.md). 
+In particular there is no `sub` step.
+
+Recall that a staged channel is represented by a utxo at tip.
+This utxo channel has an address, value, and datum. 
+A reference script is illegal. 
+
+The address's payment credential corresponds to the Cardano Lighting script
+associated to the channel currency.
+Note that the channel currency is determined by a script parameter. Thus,
+channels with different currencies will belong to different addresses.
+
+The value contains a thread token and either:
+
+- Just ada
+- Just ada and the channel currency, where the ada covers the min ada requirements.
+
+The [thread token](./thread-token.md) records the channel id in its token name.
+The channel **total** is amount of the currency in the utxo.
+
+
 
 ## Decision
 
 ### Overview
 
-A staged channel is represented by a utxo at tip.
-
-The value contains a thread token and either:
-
-- Just ada
-- Just min ada and the channel currency
-
-Note that the channel currency is determined by a script parameter. Thus,
-channels with different currencies will belong to different addresses.
-
-The thread token records the channel id in its token name.
-
-The channel total is amount of the currency in the utxo.
+#### Datum 
 
 The channel datum has the following form
 
@@ -46,6 +53,9 @@ data Datum
 The constructors follow the stages of the lifecycle.
 
 ```haskell
+type Hash32 = ByteString -- 32 bytes
+type Pubkey = Hash32 
+
 data OpenedParams = OpenedParams {
   pk0: Pubkey,
   pk1: Pubkey,
@@ -66,6 +76,46 @@ data ResolvedParams = ResolvedParams {
 data ElapsedParams = ElapsedParams {
   other: Pubkey,
 }
+```
+#### Cheque 
+
+A cheque is a declaration from one partner to 
+the other that they own them funds. 
+
+A normal cheque has no conditions. 
+A locked cheque is conditional.
+
+```haskell
+data Lock
+  = Blake2b256Lock Hash32
+  | Sha2256Lock Hash32
+  | Sha3256Lock Hash32
+
+data Timestamp = Int
+
+data Cheque
+  = NormalCheque Index Amount
+  | HtlcCheque Index Amount Timestamp Lock
+
+type Sig64 = ByteString -- 64 bytes
+
+data Signature
+  = Ed25519Signature Sig64
+  | EcdsaSecp256k1Signature Sig64
+  | SchnorrSecp256k1Signature Sig64
+
+```
+
+#### Squash 
+
+We introduce the notion of a `Squash`. 
+This provides a way to aggregate an otherwise potentially ever increasing list of cheques.
+```haskell
+data Squash = Squash 
+  { total : Int
+  , idx : Int
+  , exc : [Int]
+  }
 ```
 
 ### Rationale

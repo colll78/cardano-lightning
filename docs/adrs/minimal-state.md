@@ -46,13 +46,16 @@ data Datum
   | Closed ClosedParams
   | Resolved ResolvedParams
   | Elapsed ElapsedParams
+  | Locked LockParams
 ```
 
 The constructors follow the stages of the lifecycle.
 
 ```haskell
-type Hash32 = ByteString -- 32 bytes
-type Pubkey = Hash32
+type Pubkey = ByteString -- 32 bytes,
+data Timestamp = Int
+data Deadline = Timestamp
+
 
 data OpenedParams = OpenedParams {
   pk0: Pubkey,
@@ -65,6 +68,15 @@ data ClosedParams = ClosedParams {
   other: Pubkey,
   amtCloser: Int,
   deadline: Timestamp,
+  locked: Locked
+}
+
+data LockedParams = LockedParams { 
+  cid : ChannelId, -- maybe
+  claimaint: Pubkey,
+  other: Pubkey, 
+  deadline : Deadline,
+  lock : Lock,
 }
 
 data ResolvedParams = ResolvedParams {
@@ -84,30 +96,37 @@ funds.
 A normal cheque has no conditions. A locked cheque is conditional.
 
 ```haskell
+
+type Hash32 = ByteString -- 32 bytes
+
 data Lock
   = Blake2b256Lock Hash32
   | Sha2256Lock Hash32
   | Sha3256Lock Hash32
 
-data Timestamp = Int
-data Deadline = Timestamp
+data LockedCheque = 
+  HtlcCheque Index Amount Deadline Lock
 
-data Cheque
-  = NormalCheque Index Amount
-  | HtlcCheque Index Amount Deadline Lock
+data NormalCheque 
+  = NormalCheque Amount Index
+
+data Cheque 
+  = Normal NormalCheque
+  | Locked LockedCheque 
+  
 
 type Sig64 = ByteString -- 64 bytes
 type Secret = Bytestring -- <= 64 bytes
 
-data Signature
-  = Ed25519Signature Sig64
-  | EcdsaSecp256k1Signature Sig64
-  | SchnorrSecp256k1Signature Sig64
+data Signature = Sig64 
 
 data SignedCheque
-  = SignedNormalCheque Cheque Signature  -- Only NormalCheque
-  | SignedLockedCheque Cheque Signature Secret
+  = SignedNormalCheque NormalCheque Signature -- Only NormalCheque
+  | SignedUnlockedCheque ConditionalCheque Signature Secret
+  | SignedLockedCheque ConditionalCheque Signature
   -- ^ Only LockedCheque
+
+data SecretReveal 
 ```
 
 A normal cheque is valid if the signature belongs to the anticipated key.
@@ -152,7 +171,7 @@ close the channel with the previous squash in the receipt.
 A receipt is a squash and list of cheques
 
 ```haskell
-data Receipt = Receipt SignedSquash [SignedCheque]
+data Receipt = Receipt SignedSquash [SignedCheque] [SignedCheque (but locked)]
 ```
 
 The receipt is used in a close or resolve step. It is constructed by the partner
@@ -220,7 +239,7 @@ will still be utilised via raises, and these have a relative low index, then
 they can be included in the exclusion list (`exc`).
 
 All cheques that contribute to the amount in the squash are said to be
-**acounted** for. All other cheques are considered **unaccounted**.
+**accounted** for. All other cheques are considered **unaccounted**.
 
 A squash must be signed similarly to a cheque.
 
@@ -301,7 +320,7 @@ at risk - not their partners.
 On a `resolve`:
 
 - The tx is signed by `other`.
-- The receipt is valid with respect to the closer `key`. The total is of `t`
+- The receipt is valid with respect to the closer key `other`. The total is of `t`
   funds.
 - All cheques submitted have valid signatures from `closer`. Say the total
   amount of the cheques are `t`.

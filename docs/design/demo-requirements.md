@@ -9,15 +9,17 @@
 ## Context
 
 Cardano lightning is p2p payment solution built over the cardano blockchain.
-Users of the network maintain two party channels, through which they can send and receive funds.
-We refer to the participants of the channel as the party and counter party.
+Users of the network maintain two party channels, through which they can send
+and receive funds. We refer to the participants of the channel as the party and
+counter party.
 
 A user can perform various high level actions, including:
 
 1. Open, maintain, and terminate a channel
 2. Send, receive, and resolve funds
 
-We'll refer to all these and related activities as **network management** and **channel management**.
+We'll refer to all these and related activities as **network management** and
+**channel management**.
 
 We anticipate that there are different types of users of the network,
 characterized by their typical behaviour:
@@ -26,14 +28,16 @@ characterized by their typical behaviour:
 - a user who mainly receives funds
 - a user who routes funds
 
-Note, however, these distinctions are not strict.
-Any user can send, receive, and route funds.
-Nonetheless, we anticipate these characterizations relate
-to the preferred behaviour and tooling engaging the network.
+Note, however, these distinctions are not strict. Any user can send, receive,
+and route funds. Nonetheless, we anticipate these characterizations relate to
+the preferred behaviour and tooling engaging the network.
 
-A mainly-sends user is not necessarily technical and desires channel management via an intuitive mobile or web app, which is mostly offline until the user is active.
-A mainly-receives user may have some technical understanding, and desires lightweight channel management that integrates with existing software.
-A mainly-routes user is probably technical and desires robust, HA software, where intuitive interface is secondary to powerful API/SDK.
+A mainly-sends user is not necessarily technical and desires channel management
+via an intuitive mobile or web app, which is mostly offline until the user is
+active. A mainly-receives user may have some technical understanding, and
+desires lightweight channel management that integrates with existing software. A
+mainly-routes user is probably technical and desires robust, HA software, where
+intuitive interface is secondary to powerful API/SDK.
 
 ## Problem statement
 
@@ -47,11 +51,11 @@ Capabilities requiring read and/or write to the L1:
 4. Unanimously close a channel
 5. Contest a close
 
-Each of these requires the ability to query the current state of channels.
-It is also important that a channel history is available to the user.
+Each of these requires the ability to query the current state of channels. It is
+also important that a channel history is available to the user.
 
-At least initially, the network has no shared global state.
-For each user, the L2 is simply the state of the channels of which they are a party.
+At least initially, the network has no shared global state. For each user, the
+L2 is simply the state of the channels of which they are a party.
 
 Capabilities requiring only the L2:
 
@@ -60,8 +64,8 @@ Capabilities requiring only the L2:
 1. Receive a cheque
 1. Resolve a cheque with or without commitment
 
-Additionally, the user must be able to see the status and history of the L2.
-The software prevents a user undertaking an action that puts their funds at risk,
+Additionally, the user must be able to see the status and history of the L2. The
+software prevents a user undertaking an action that puts their funds at risk,
 such as allowing the counter party to potentially over-leverage their account.
 
 ## Feature set
@@ -94,7 +98,8 @@ Other:
 
 ### Blackboxed L1 api
 
-Before wee write the plutus script(s), tx building functions and setup chain indexers,  
+Before wee write the plutus script(s), tx building functions and setup chain
+indexers,  
 lets have an interface modelling the L1.
 
 Here's a proposal:

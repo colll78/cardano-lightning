@@ -2,16 +2,18 @@
 
 ## Intro
 
-Cardano lightning is p2p payment solution built over the Cardano blockchain.
-It is an L2 optimized for:
+Cardano lightning is p2p payment solution built over the Cardano blockchain. It
+is an L2 optimized for:
 
 - Near instant settlement
 - Scalability
 
-It is to be interoperable with other lightning networks, and is very much inspired by bitcoin lightning.
+It is to be interoperable with other lightning networks, and is very much
+inspired by bitcoin lightning.
 
-Users of the network maintain two party channels, through which they can send and receive funds.
-We may refer to the participants of the channel as the party and counter party.
+Users of the network maintain two party channels, through which they can send
+and receive funds. We may refer to the participants of the channel as the party
+and counter party.
 
 A user can perform various high level actions, including:
 
@@ -58,11 +60,15 @@ flowchart LR
 
 ### Terminology
 
-- `Party0` and `Party1` - refers to the party indexed as `0` and `1` respectively which are used to refer to the two parties in the channel.
+- `Party0` and `Party1` - refers to the party indexed as `0` and `1`
+  respectively which are used to refer to the two parties in the channel.
 
-- `Party` and `CounterParty`- we use both terms to refer to either party depending on the context (so `Party0` can be referred as `Party` or `CounterParty`).
+- `Party` and `CounterParty`- we use both terms to refer to either party
+  depending on the context (so `Party0` can be referred as `Party` or
+  `CounterParty`).
 
-- We use `Account0` or `Delta0` to refer to entities related to `Party0`. We use `*1` for `Party1`.
+- We use `Account0` or `Delta0` to refer to entities related to `Party0`. We use
+  `*1` for `Party1`.
 
 ```haskell
 
@@ -202,14 +208,15 @@ When `(prev, red_, next)` is
 
 1. Counter party signed tx ie `extra_signatories |> includes(prev_fix.pk1)`.
 2. Counter party funds account `acc1 = next_val - prev_val >= 0`
-3. `next` has "default" state
-   ie `open = OpenParams 0 0 0 (Snapshot 0 prev_val [] acc0 [])`
+3. `next` has "default" state ie
+   `open = OpenParams 0 0 0 (Snapshot 0 prev_val [] acc0 [])`
 
 `(Open(OpenParams pd pa0 pa1 ps), Add, Open(OpenParams nd na0 na1 ns))`:
 
 1. Snapshot and delta are unchanged: `ps == ns` and `pd == nd`
 2. Ada added: `amt = next_val - prev_val >= MIN_ADD`
-3. Accounts have increased: `pa0 >= na0 && pa1 >= na1 && (pa0 + pa1) + amt == (na0 + na1)`
+3. Accounts have increased:
+   `pa0 >= na0 && pa1 >= na1 && (pa0 + pa1) + amt == (na0 + na1)`
 
 `(Open(OpenParams pd pa0 pa1 ps), Sub cs, Open(OpenParams nd na0 na1 ns))`:
 
@@ -237,8 +244,7 @@ If `prev` is `Closed`:
 
 ### Coercion to bytes
 
-All data has canonical serialization.
-TODO: Clarify this point.
+All data has canonical serialization. TODO: Clarify this point.
 
 ```haskell
 asBytes :: x serializable; x -> ByteString
@@ -249,8 +255,8 @@ asBytes x = x
 
 The protocol supports all hashing schemes available in Plutus.
 
-A limit is placed on the size of the secret `preimg`.
-This is to prevent a scenario where a `preimg` is so large it could cause tx size issues.
+A limit is placed on the size of the secret `preimg`. This is to prevent a
+scenario where a `preimg` is so large it could cause tx size issues.
 
 ```haskell
 unlocks :: Secret -> Hash32 -> Bool
@@ -284,9 +290,9 @@ verify pubkey msg signature = case signature of
   | SchnorrSecp256k1Signature sig -> verifySchnorrSecp256k1Signature pubkey msg sig
 ```
 
-Messages are prepended with the `ChannelId` as the effective nonce.
-All messages for a given channel have some cumulative element
-(eg Cheques have and `Index` and/or `Amount`) preventing reuse.
+Messages are prepended with the `ChannelId` as the effective nonce. All messages
+for a given channel have some cumulative element (eg Cheques have and `Index`
+and/or `Amount`) preventing reuse.
 
 Cheques
 

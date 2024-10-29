@@ -1,0 +1,3 @@
+# using git-hooks.nix
+.pre-commit-config.yaml 
+

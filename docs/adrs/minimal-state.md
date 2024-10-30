@@ -71,10 +71,10 @@ data ClosedParams = ClosedParams {
   locked: Locked
 }
 
-data LockedParams = LockedParams { 
+data LockedParams = LockedParams {
   cid : ChannelId, -- maybe
   claimaint: Pubkey,
-  other: Pubkey, 
+  other: Pubkey,
   deadline : Deadline,
   lock : Lock,
 }
@@ -104,21 +104,21 @@ data Lock
   | Sha2256Lock Hash32
   | Sha3256Lock Hash32
 
-data LockedCheque = 
+data LockedCheque =
   HtlcCheque Index Amount Deadline Lock
 
-data NormalCheque 
+data NormalCheque
   = NormalCheque Amount Index
 
-data Cheque 
+data Cheque
   = Normal NormalCheque
-  | Locked LockedCheque 
-  
+  | Locked LockedCheque
+
 
 type Sig64 = ByteString -- 64 bytes
 type Secret = Bytestring -- <= 64 bytes
 
-data Signature = Sig64 
+data Signature = Sig64
 
 data SignedCheque
   = SignedNormalCheque NormalCheque Signature -- Only NormalCheque
@@ -126,7 +126,7 @@ data SignedCheque
   | SignedLockedCheque ConditionalCheque Signature
   -- ^ Only LockedCheque
 
-data SecretReveal 
+data SecretReveal
 ```
 
 A normal cheque is valid if the signature belongs to the anticipated key.
@@ -320,8 +320,8 @@ at risk - not their partners.
 On a `resolve`:
 
 - The tx is signed by `other`.
-- The receipt is valid with respect to the closer key `other`. The total is of `t`
-  funds.
+- The receipt is valid with respect to the closer key `other`. The total is of
+  `t` funds.
 - All cheques submitted have valid signatures from `closer`. Say the total
   amount of the cheques are `t`.
 - The continuing value has `amtCloser - total - t`. (TODO : Check)

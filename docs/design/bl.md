@@ -2,9 +2,9 @@
 
 ## Introduction
 
-The Bitcoin Lightning Network (BLN) has emerged as a transformative solution for scaling Bitcoin. It offers faster and more cost-effective transactions while preserving core Bitcoin values: decentralization and a safe, censorship-resistant payment protocol. Inspired by BLN, Cardano Lightning (CL) aims to implement similar advantages within the Cardano ecosystem. However, rather than merely replicating BLN's architecture, we seek to understand the underlying differences between the two chains that can influence the final design of CL channels.
+The Bitcoin Lightning Network (BLN) has emerged as a transformative solution for scaling Bitcoin. It offers faster and more cost-effective transactions while preserving core Bitcoin values - it is decentralized, safe and censorship-resistant payment protocol. Inspired by BLN, Cardano Lightning (CL) aims to implement similar advantages within the Cardano ecosystem. However, rather than merely replicating BLN's architecture, we seek to understand the underlying differences between the two chains that can influence the final design of CL channels.
 
-It's important to note that our focus is strictly on channel design and channel composition. Aspects of the network like gossiping, routing encryption, encoding, pathfinding, etc., fall outside the scope of this discussion.
+It's important to note that our focus is strictly on channel design and channel composition at this point. Aspects of the network like gossiping, routing encryption, encoding, pathfinding, etc., fall outside the scope of this discussion.
 
 Furthermore, by no means are we Bitcoin experts, and we don't want to spread any misinformation. If you see any mistakes or have any suggestions, please let us know on our GitHub issue tracker: [https://github.com/cardano-lightning/cardano-lightning/issues](https://github.com/cardano-lightning/cardano-lightning/issues).
 
@@ -28,11 +28,36 @@ Furthermore, by no means are we Bitcoin experts, and we don't want to spread any
 
 ### Consensus Protocol
 
-Consensus mechanisms are fundamental to the security and functionality of blockchain networks. Bitcoin utilizes a Proof-of-Work (PoW) algorithm and Cardano employs the Ouroboros Proof-of-Stake (PoS) consensus algorithm. They achieve "similar" safety but measured using different resources - hashing power or amount of stake which belong to honest parties.
+Consensus mechanisms are fundamental to the security and functionality of the blockchain networks. Bitcoin utilizes a Proof-of-Work (PoW) algorithm and Cardano employs the Ouroboros Proof-of-Stake (PoS) consensus algorithm. They achieve "similar" safety but measured using different resources - hashing power or amount of stake which belong to honest parties in the network. It seems that historically this difference had pretty little impact on the base capabilities of both chains but probably it will be much more impactful in the future.
 
-We can say that Cardano brings to the table a well defined finality treashold but it is currently so high (2160 blocks ~ 12 hours) that it seems still impractical. On both blockchains we can still rely on the probabilistic finality which is based of the block depth but in the case of Cardano which has much faster production rate we can achieve relatively high safety after just few minutes vs an hour on Bitcoin because blocks on cardano are produced every ~20 seconds and on Bitcoin every ~10 minutes.
+#### Transaction Cost and Finality
 
-Finality can affect how fast the lightning topology can be chanaged and how fast the channels can be considered open or closed. So the current parameters gives a bit of adventage to the Cardano blockchain.
+We can say that Cardano brings to the table a well defined finality treashold but it is currently so high (2160 blocks ~ 12 hours) that it seems still impractical. On both blockchains we can rely on the probabilistic finality though which is based of the block depth but in the case of Cardano which has much faster block production rate (every ~20-30 sec.) we can achieve relatively high safety after just a few minutes. On Bitcoin we should wait a bit longer because blocks are produced every 10 minutes. Of course any congestion can affect the settlement time and influence the total time required from the submission of the transaction to its finalization.
+
+In the current market context transaction fees are lower on Cardano than on Bitcoin (during the last year the median fees were in a 0.2 to 20 USD range vs 0.08 to 0.17 USD). Quite significant difference between those two blockchains is how they currently approach transaction selection. 
+
+
+Finality and price can affect how fast the lightning topology can be chanaged - how fast the channels can be considered open or closed. It can affect also how quickly the liquidity of that topology can be adapted through operations like `splicing` which add or remove funds from the channel. Liquidity distribution accross the topology is important because it affects if and how big payment can be routed through the network without the need for splitting and transfering it using much more involved multi path payment.
+
+
+Of course the number of sheer transactions involved in the channel lifecycle will is an important factor here as well. Ideally we would like to achieve parity between BLN and CL regarding the number of transactions required for channel management but we can still consider a bit more involved protocol as a baseline on Cardano because the cost of the transaction is much lower.
+
+If we can batch the operations easily especially in asynchronous way so the coordination between all the parties involved is not needed we can expect that the liquidity providers can react quickly to the demand of the network. 
+
+We can see that the current parameters gives CL a channce to be a bit more flexible and efficient in the channel management but it is hard to estimate how impactful those differences will be in the real world.
+
+#### MinADA
+
+####  Data 
+
+One of the 
+
+
+- the throughput like speed, finality or information availability of the L1  built on top of the blockchain but this 
+
+It seems that historically this difference had pretty little impact on the capabilities of both chains - the throughput like speed, finality or information availability of the L1  built on top of the blockchain but this 
+
+
 
 On Cardano we have though With the new addition to the Ouroboros protocol we can expect that finality threashold to be significantly improved
 

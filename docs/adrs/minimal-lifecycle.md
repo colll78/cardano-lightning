@@ -106,6 +106,21 @@ now in the **elapsed** stage.
 From the elapsed stage, the other participant can perform a **recover** step.
 This unstages the channel and unlocks the remaining funds.
 
+### Handling locked cheques
+
+There is a important scenario overlooked in the above simplification, that must
+now be considered.
+
+The off-chain transacting can involve 'locked cheques'. Theses are cheques that
+are valid only if some conditions are satisfied. It will not necessarily be
+known at a close or a resolve step which partner should ultimately own the
+associated funds.
+
+If the partner performing a close or resolve step has locked cheques, these are
+included in the step. A new output is created associated with each locked
+cheque. The output is spendable by the partner able to meet the conditions.
+There is no thread token.
+
 ### Rationale
 
 \-

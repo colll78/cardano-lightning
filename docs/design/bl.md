@@ -164,10 +164,16 @@ Or we could actually use both approaches. We could leave a multi-sig option for 
 >   * this design though simple can actually be really efficient because liquidity providers can batch `add` operations to optimize the time. Additionally this process can be asynchronous.
 >   * this design is realatively simpler then upfront coordination of transaction creation across many parties.
 
+Initially, the BLN only supported single-funded channels which were much easier to implement. Funding transaction which creates the channel through multi-sig channel UTxO and requires only funder signature. This transaction can be settled once the funder receives signed refund transaction which secures the initial channel balances.
+A later version of BLN peer protocol introduced dual funding, which allows both parties to contribute the initial funds. This development was relatively slow because it required careful design of interactive transaction buildup of that funding multi-sig transaction. This interative protocol constructs transaction piece by piece by adding single outputs and inputs from both partners. Actually even more lighting users can be involved in this buildup to coordinate funding of multiple channels at the same time.
+
+Cardano can potentially handle channel funding more flexibly. Starting with single funding is simpler and may seem inefficient, but it allows liquidity providers to add funds asynchronously later on, optimizing both time and resources. This approach, while straightforward, can prove efficient as it allows batching of 'add' operations by liquidity providers.
+
 ### 4.2.2 Splicing
 > Key points:
+>   * BLN still lacks it though the addition is in the final stage.
 >   * Multi-sig flexibility can be a bit limited because the trasnaction buidling has to be coordinated between the parties.
->   * Abstracting over the permission to perform fund removal on Cardano can introduce usability which is highly desired by the liquidity providers when extra asynchronicity is sometimes needed (some end users/customers can sporadically on-line).
+>   * Abstracting over the permission to perform fund removal on Cardano can introduce usability which is highly desired by the liquidity providers when extra asynchronicity is sometimes needed (some end users/customers are sporadically on-line).
 
 ### 4.3 Penalty System - Design Choice or Imposed Limitation
 > Key points:

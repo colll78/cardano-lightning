@@ -190,6 +190,8 @@ Cardano can potentially handle channel funding more flexibly. Starting with sing
 > * We have all the crypto primitives:
 >   * BLN uses RIPEMD160 but only on the chain (Plutus will have it) - peer protocol exchanges the lock in the form of sha256
 > * PTLC:
+>   * Operationally it is "rather simple":
+>     * It uses linear nature of the Schnorr scheme - when we "add secrets" the results of the hard to reverse function ("hash") also add up.
 >   * It is still under discussion [^I have useful link] and the AFAIU the last design required only Schnorr signatures which we have on Cardano.
 >   * Should adopt it right away in CL? We shouldn't because it complicates flow and it is outside of the current phase of the project.
 

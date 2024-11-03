@@ -20,14 +20,14 @@ Disciussing and especially formulating any definitive claims regarding capabilit
 By no means are we Bitcoin experts, and we don't want to spread any misinformation. If you see any mistakes or have any suggestions, please let us know on our GitHub issue tracker: [https://github.com/cardano-lightning/cardano-lightning/issues](https://github.com/cardano-lightning/cardano-lightning/issues).
 
 
-Optional section (should it be included at the end of the article?):
+> XXX: This section seem redundant - we should have full smart contract related section which dives deeper into multi-sig etc. On the other providing some details on how BLN channel works could be useful here.
 
 ## BLN Channels 101
 
 The motive of a Lightning style L2 solution, that is orders of magnitude cheaper and faster than L1 is shared by both chains. 
 Bitcoin fees vary, but can be <1$. Cardano fees are generally lower and much more predictable, often <.2$.
 
-## The Contract 
+## The Contract
 
 > TODO: Rephrase that to a general BLN contrat overview.
 > Originally This was in "# The Lock" section by @waalge
@@ -44,10 +44,6 @@ Note: It is not clear to the authors (due to their ignorance of the inner workin
 whether such functionality exists, but it remains that the 2-of-2 mutlisig is used.
 
 Bitcoin Script seems to have limited capabilities regarding signature checking as the operations which perform checking do this using the current transaction hash.
-
-### Composition
-
-> Short overview of the HTLC
 
 ## 3. Blockchains
 
@@ -104,7 +100,6 @@ On Cardano we have protocol level rule which is called min UTxO (or `min ADA`) w
 >   * Bitcoin is at its core monoasset at least that how BLN is designed.
 >   * Cardano is multiasset by design.
 >       * This can have huge implications for onboarding non-crypto retailers and users because they can not use stable coins on BLN at the moment.
->  
 
 Non native assets are used accross blockchains to represent real-world assets or currencies through stable coins. Bitcoin network natively does not support any other tokens than BTC but there is really an interesting development around Taproot Assets which adds multi asset support to that L1.
 This new multi-asset capability was recently integrated into the BLN [^1]. A really interesting aspect of that integration is that it supports "edge nodes" which can facilitate payment routing across channels with different types of coins. It is done through swapping with clearly specified exchange rate.
@@ -158,24 +153,23 @@ Or we could actually use both approaches. We could leave a multi-sig option for 
 
 ### 4.2.1 Funding
 
-> * V1 contained only single funded channels
-> * V2 adds ability for dual funding.
-> * Question: why it took so long to implement this feature as it "only" changes the initial commitment transaction?
-> * Answer: probably this is a proof that they are careful and also that some details in the context of multi-sig management can be tricky.
+> Key points:
+> * BLN "channel funding" history:
+>   * V1 contained only single funded channels
+>   * V2 adds ability for dual funding.
+>   * Question: why it took so long to implement this feature as it "only" changes the initial commitment transaction?
+>   * Answer: probably this is a proof that they are careful and also that some details in the context of multi-sig management can be tricky.
 > * Cardano:
 >   * because we can pretty naturally utilize multiple transactions for channel lifecycle we can start with "seemingly" inefficient approach which is single founding with the possibility to add more funds later.
 >   * this design though simple can actually be really efficient because liquidity providers can batch `add` operations to optimize the time. Additionally this process can be asynchronous.
 >   * this design is realatively simpler then upfront coordination of transaction creation across many parties.
 
 ### 4.2.2 Splicing
-> On Bitcoin this 
-
-> * Flexibility:
+> Key points:
 >   * Multi-sig flexibility can be a bit limited because the trasnaction buidling has to be coordinated between the parties.
 >   * Abstracting over the permission to perform fund removal on Cardano can introduce usability which is highly desired by the liquidity providers when extra asynchronicity is sometimes needed (some end users/customers can sporadically on-line).
 
 ### 4.3 Penalty System - Design Choice or Imposed Limitation
-
 > Key points:
 > * BLN uses penalty system to enforce updates:
 >   * Eltoo an different Bitcoin payment protocol proposal which uses "update" approach but it requires a new opcode.
@@ -184,10 +178,14 @@ Or we could actually use both approaches. We could leave a multi-sig option for 
 >   * It introduces extra complexity because it requires reserve amount to be negotiated and funds to be locked.
 >   * Penalty system imposes extra storage requirements on the channel participants as the revocation keys have to be stored.
 
-### HTLC in Depth
+### HTLC and Crosschain Composition
 
-#### PTLC
-
+> Key points:
+> * We have all the crypto primitives:
+>   * BLN uses RIPEMD160 but only on the chain (Plutus will have it) - peer protocol exchanges the lock in the form of sha256
+> * PTLC:
+>   * It is still under discussion [^I have useful link] and the AFAIU the last design required only Schnorr signatures which we have on Cardano.
+>   * Should adopt it right away in CL? We shouldn't because it complicates flow and it is outside of the current phase of the project.
 
 ## Sources
 

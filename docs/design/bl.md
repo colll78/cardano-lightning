@@ -7,7 +7,7 @@
 The Bitcoin Lightning Network (BLN) has emerged as a transformative solution for
 scaling Bitcoin. It offers faster and more cost-effective transactions while
 preserving core Bitcoin values - it is decentralized and censorship-resistant
-payment protocol. Payments on BLN are neraly instantly finalized preserving the
+payment protocol. Payments on BLN are near instantly finalized preserving the
 full safety of the underlining blockchain.
 
 Inspired by BLN, Cardano Lightning (CL) aims to implement similar advantages
@@ -21,28 +21,31 @@ encryption, encoding, pathfinding, etc., fall outside the scope of this
 discussion.
 
 Beside the core channel design we would like to understand how to preserve
-composibility of the CL channels with BLN channels so a payment can be executed
+compatibility of the CL channels with BLN channels so a payment can be executed
 across both blockchains in an atomic manner. We would like to also explore how
 the blockchain properties and its derived ecosystem impacts the design and
-operations and implementations of channel management software (lightining nodes
+operations and implementations of channel management software (lightning nodes
 and wallets).
 
 ### 1.2 Disclaimers
 
-Disciussing and especially formulating any definitive claims regarding
-capabilities or design of BLN (and Bitcoin in general) is not easy and risky.
-History of BLN development proves that many limitations of the initial version
-of the protocol (like lack of easy rebalancing called "splicing" or missing
-ability to perfrom dual funding) were not inhernt to the solution because of
-some Bitcoin L1 limitations. They were just harder to design and implement
-correctly. BLN proves in many places that some problems could seem infeasible to
-solve in a rather constrainted environment of Bitcoin Script but at the end they
-are solvable in rather elegant and ingenious manner.
-
-By no means are we Bitcoin experts, and we don't want to spread any
-misinformation. If you see any mistakes or have any suggestions, please let us
+We aren't Bitcoin nor BLN experts. All content is presented to the best of our
+understanding. If you see any mistakes or have any suggestions, please let us
 know on our GitHub issue tracker:
 [https://github.com/cardano-lightning/cardano-lightning/issues](https://github.com/cardano-lightning/cardano-lightning/issues).
+
+BLN is not a static project - it is under active development by several
+independent entities. This makes it challenging to say with confidence "BLN
+can't do X". For example splicing, allowing for channel funds to be altered
+midlife, did not exist in the original version of BLN, but is being (has now
+been?) implemented.
+
+Furthermore, saying that "BLN can't do X because the limitations of Bitcoin
+script and L1", is joining more dots than we often have the evidence to support.
+BLN accomplishes an impressive amount often in ingenious and elegant ways, in
+the highly constrained environment of Bitcoin script. We will take the liberty
+in places that it is likely that choices we made _because_ of the environment in
+which BLN operates.
 
 > XXX: This section seem redundant - we should have full smart contract related
 > section which dives deeper into multi-sig etc. On the other providing some
@@ -50,13 +53,12 @@ know on our GitHub issue tracker:
 
 ## BLN Channels 101
 
-The motive of a Lightning style L2 solution, that is orders of magnitude cheaper
-and faster than L1 is shared by both chains. Bitcoin fees vary, but can be
-<1$. Cardano fees are generally lower and much more predictable, often <.2$.
+BLN offers transactions that are orders of magnitude cheaper and faster than L1
+is shared by both chains. Bitcoin fees vary, but can be <1$.
 
 ## The Contract
 
-> TODO: Rephrase that to a general BLN contrat overview. Originally This was in
+> TODO: Rephrase that to a general BLN contract overview. Originally This was in
 > "# The Lock" section by @waalge
 
 BL uses a 2-of-2 multisig script to lock funds on the Bitcoin ledger -
@@ -80,11 +82,11 @@ Bitcoin Script seems to have limited capabilities regarding signature checking
 as the operations which perform checking do this using the current transaction
 hash.
 
-## 3. Blockchains
+## Comparing Blockchains
 
 Let's dive into a few attributes related to the core principles and rules which
 govern both networks and try to identify how some of these differences can
-inpact lightning channels design and operations.
+impact lightning channels design and operations.
 
 > Key points:
 >
@@ -117,62 +119,76 @@ inpact lightning channels design and operations.
 
 ### 3.1 Consensus Protocol
 
-Consensus mechanisms are fundamental to the security and functionality of the
-blockchain networks. Bitcoin utilizes a Proof-of-Work (PoW) algorithm and
-Cardano employs the Ouroboros Proof-of-Stake (PoS) consensus algorithm. They
-achieve "similar" safety but measured using different resources - hashing power
-or amount of stake which belong to honest parties in the network. It seems that
-historically this difference had pretty little impact on the base capabilities
-of both chains but probably it will be much more impactful in the future.
+Consensus is the mechanism by which a decentralised set of participants "agree"
+what the true state is. It is fundamental to the security and functionality of
+the blockchains.
 
-#### 3.1.2 Transaction Finality
+Bitcoin uses a Proof-of-Work (PoW) algorithm with longest chain for consensus.
 
-We can say that Cardano brings to the table a well defined finality treashold
-but it is currently so high (2160 blocks ~ 12 hours) that it seems still
-impractical for operations like channel opening, rebalancing or closing (all of
-these operations require L1 transactions). On both blockchains we can rely on
-the probabilistic finality though which is based of the block depth - we measure
-how many blocks were minted/produced after our transaction of interested was
-settled. In the case of Cardano which has much faster block production rate
-(every ~20-30 sec.) we can achieve relatively high safety after just a few
-minutes. On Bitcoin we should wait a bit longer because blocks are produced
+Cardano uses the Ouroboros Proof-of-Stake (PoS) consensus algorithm with an
+augmented longest chain for consensus. The augmentation is to prevent _long
+range_ attacks that PoS chains are more susceptible to. It is much more similar
+to that
+
+#### 3.1.2 Finality
+
+Bitcoin has only probabilistic finality. There is no limit to the size of a
+rollback. However, the cost of creating a longer chain, triggering a rollback,
+is exponential in the number of blocks. A block is produced roughly every 10
+minutes.
+[Kraken.com](https://support.kraken.com/hc/en-us/articles/203325283-Cryptocurrency-deposit-processing-times)
+says it waits ~40 minutes, suggesting they wait for 3-4 blocks before
+considering a transaction safely on-chain.
+
+Cardano does have deterministic finality. It is currently high, 2160 blocks ~ 12
+hours. Cardano also has probabilistic finality within this window, and in
+practice rollbacks are rarely larger than a few blocks. A block is produced
+roughly every 20-30 seconds.
+[Kraken.com](https://support.kraken.com/hc/en-us/articles/203325283-Cryptocurrency-deposit-processing-times)
+says it waits ~15 minutes, suggesting they wait for 45 blocks before considering
+a transaction safely on-chain.
+
+#### Mempool and congestion
+
 every 10 minutes. Of course any congestion can affect the settlement time and
 influence the total time required from the submission of the transaction to its
 finalization. We should really understand that both blockchains maximal
-throughput is currently in the same bullpark. On the other hand Cardano is
-expecing a really significant protocol upgrade called Peras which through
-"stake" based nature of that blockchain will add fast finallity to it.
+throughput is currently in the same ballpark. On the other hand Cardano is
+expecting a really significant protocol upgrade called Peras which through
+"stake" based nature of that blockchain will add fast finality to it.
 
 Finality and fees (discussed below) can affect how fast the lightning network
-topology can be chanaged - how quickly channels can be opened and operational or
+topology can be changed - how quickly channels can be opened and operational or
 closed. It can also affect how smoothly the liquidity in that topology can be
 adapted to the demands through operations like `splicing` which adds or removes
-funds from the channel. Liquidity distribution accross the topology is important
+funds from the channel. Liquidity distribution across the topology is important
 because it affects if and how big payment can be routed through the network
-without the need for splitting and transfering it using much more involved multi
-path payment.
+without the need for splitting and transferring it using much more involved
+multi path payment.
 
 Faster finality and cheaper transactions means that CL channels can possibly
 utilize L1 with greater flexibility. At the baseline protocol level we probably
 don't have to necessarily compresses every channel L1 operation into a single
 transaction. We should of course possibly enable this more efficient strategy
-based on muti-sig transactinos - full off-chain consensus but as we will learn
+based on muti-sig transactions - full off-chain consensus but as we will learn
 these seemingly optimal route can impose inflexibility which can lead to
 actually more transactions in many contexts!
 
 #### 3.1.3 Data Availability and Lightweight Clients
 
-### 3.2 Transaction Settlement and Fees
+### 3.2 Transaction Fees
+
+Bitcoin transaction fees are dynamic and determined by a fee market. Blocks are
+filled with the transactions willing to pay the highest fees.
+
+This aspect is reflected in the BLN channel management as channel partners have
+to establish together the fee value of their commitment transactions. For that
+purpose we have `update_fee` message.
 
 In the current market context transaction fees are lower on Cardano than on
 Bitcoin (during the last year the median fees were in a 0.2 to 20 USD range vs
 0.08 to 0.17 USD). Quite significant difference between those two blockchains is
 how they currently approach transaction selection.
-
-On Bitcoin transacion settlement cost depeends on the free fee market
-conditions. This aspect is reflected in the BLN channel mangement as channel
-partners have to establish together the fee value of their commitment
-transactions. For that purpose we have `update_fee` message.
 
 Default Cardano node respects the fairness assumption so when block is produced
 transactions are processed in the order they were received regardless of the fee

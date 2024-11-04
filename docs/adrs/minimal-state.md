@@ -193,6 +193,10 @@ Thus the `sq0 .^ amt` is the amount `vk0` is owed by `vk1`.
 
 A partner should only send squashes with values monotonically increasing in amount. 
 
+Partners do not necessarily share a context.
+Actions are happening asynchronously. 
+Two snapshots may both be valid representations of a state.
+We introduce an operation to unify two snapshots.
 Snapshots can be unioned by taking the respective squashes with greatest amount. 
 
 ```haskell
@@ -208,6 +212,9 @@ Note that this is not a symmetric operation.
 If the amount appearing in respective squashes are equal then we use the left argument. 
 In practice, a partner should only sign and accept monotonically increasing snapshots.
 That is, in which the squash amounts are increasing. 
+
+Once a cheque is included in a snapshot, it is accounted for. 
+It is unsafe for a partner to accept an accounted for cheque, since it cannot be used in a settle.
 
 ##### Signing snapshots 
 

@@ -1,5 +1,5 @@
 ---
-title: "minimal channel lifecycle"
+title: "minimal lifecycle"
 status: proposed
 authors: "@waalge"
 date: 2024-10-06
@@ -25,7 +25,8 @@ Users of the network are **participants** and form the nodes of the graph of the
 network.
 
 A **channel** is an edge to the network connecting two participants. A channel
-compromises of state and actions that happen both on-chain and off-chain.
+compromises of state and actions that happen both on-chain and off-chain. The
+two nodes connected by a channel are **partners**.
 
 On-chain, a channel is represented by utxos, at most one at tip at any one time.
 While such a utxo exists at tip, the channel is **staged** (see 'stages' below).

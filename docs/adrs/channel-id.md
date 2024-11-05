@@ -1,7 +1,9 @@
 ---
-title: "Channel identification"
+title: "Channel id"
 status: proposed
-authors: "@paluh"
+authors:
+  - "@paluh"
+  - "@waalge"
 date: 2024-10-24
 tags:
   - l1
@@ -46,8 +48,11 @@ A channel is identified by its thread token.
 
 ### Overview
 
-The thread token is an NFT. The token's script is the same as that of the
-payment credentials. The token name is
+The thread token is an NFT. The script is the same as the spending script,
+invoked with a different purpose. Thus the script can determine its own hash
+from either a policy id or payment credentials.
+
+The token name is:
 
 ```rs
 let name = "⚡" + cid
@@ -55,16 +60,23 @@ let name = "⚡" + cid
 
 where
 
-- `cid = blake2b_224 seed`
+- `cid = take 20 $ blake2b_224 $ concat seed idx`
 - `seed` is the oref of some input spent in the mint.
+- `idx` is the relative output index the minting tx outputs the thread token.
 
-The thread token never leaks from the thread and that it is burned in an
-unstaging step.
+The thread token never leaks from the thread, ie channel utxo. It is burned in
+an unstaging (ie terminating) step.
+
+Within a single transaction, there is at most one `seed`. All thread tokens are
+output in consecutive utxos, making it simpler and cheaper to handle the `idx`.
+
+Note that the mint value will list the tokens 'out of order' relative to the
+outputs.
 
 ### Rationale
 
-The thread token is relatively old design pattern. It seems to be favoured by
-(some) auditors, on the grounds that it is easier to reason about that
+The thread token is a well understood design pattern. It seems to be favoured by
+(some) auditors on the grounds that it is easier to reason about that
 alternatives.
 
 TODO: rework the below.
@@ -82,7 +94,7 @@ TODO: rework the below.
   `Datum` and `Script` consistency. This can have an minimal impact on indexers
   performance.
 
-- Removes ambiguity - uniquness is a guaranteed invariant. This simplifies not
+- Removes ambiguity - uniqueness is a guaranteed invariant. This simplifies not
   only indexers but other software as well.
 
 - Simplify on-chain contract preservation checks (continuing UTxO
@@ -90,15 +102,15 @@ TODO: rework the below.
 
 #### Cons
 
-- Makes Hydra integration a bit harder. If we require presence of a unique token
-  per channel then we could:
+- Makes Hydra integration harder. Specifically propogating a channel from the L2
+  to the L1. per channel then we could:
   - Mint a unique one based on randomness commitments (both parties provide
     signed hashes of "random" numbers)
   - We compute the final value from xoring the preimiges
-  - We store the commitmets in the state
+  - We store the commitments in the state
   - We use the commitments to recompute the token when performing the minting
-    during the settlment of the channel on the L1 in the case when Hydra head is
-    closed before the CL channel is closed.
+    during the settlement of the channel on the L1 in the case when Hydra head
+    is closed before the CL channel is closed.
 
 ## Discussion, Counter and Comments
 
@@ -106,15 +118,11 @@ TODO: rework the below.
 
 #### No cid
 
-Channel is associated with the initial UTxO and the client folds the contract
-thread.
+The channel is associated with the initial UTxO and the client folds the
+contract thread.
 
-In order to operate safely:
-
-- requires full access an indexer which provides all the intermediate
-  transactions and requires querying Mithril aggregator for all the
-  transactions, OR
-- requires a trusted indexer so cardano node as well.
+In order to operate safely it requires full access an indexer which provides all
+the intermediate transactions.
 
 Advantages:
 
@@ -122,25 +130,11 @@ Advantages:
 
 Disadvantages:
 
-- Off-chain tracking is much more complicated/ expensive: Requires history,
-  rather than just tip.
-- Seems to shift complexity onto cheques and cheque handling
-- Depending on other design decisions, has implications for key reuse
-
-#### cid via pubkeys
-
-The channel l1 already requires recording the pubkeys of the partners. These
-must be stored in the datum. These could be used, eg concatenated or
-concatenated and hashed, to form a `cid`.
-
-Advantages:
-
-- trivial hydra compat (no token)
-
-Disadvantages:
-
-- Allows channel spoofing
-- A pair of keys can only be used safely in a single instance
+- Off-chain tracking is much more complicated/ expensive since it requires
+  history, rather than just tip.
+- Shifts complexity onto cheques and cheque handling
+- Depending on other design decisions, it has implications for safety on key
+  reuse.
 
 #### cid via datum
 
@@ -154,6 +148,28 @@ Advantages:
 Disadvantages:
 
 - Allows channel spoofing
+- Makes indexing potentially more fiddly since indexers generally support
+  inspecting the value of utxo more straightforwardly than parsing a custom
+  datum and pulling out a value.
+
+A version of this bases the `cid` on the partners keys.  
+The channel l1 already requires recording the pubkeys of the partners. These
+must be stored in the datum. These could be used, eg concatenated or
+concatenated and hashed, to form a `cid`. This shares the advantages and
+disadvantages above. It requires one fewer field being stored in the datum, but
+at the cost of slightly more laborious pattern checking, and implications for
+key reuse.
+
+#### Alternative id generators
+
+A mildly cheaper version requires making only one hash:
+`cid' = push idx digest`, where
+
+- `digest = (take 20 $ blake2b_224 seed)`
+- We'd limit `idx < 256`
+
+An advantage is that the tokens are in the order they are output. A drawback is
+that the channel ids will differ only by a single byte.
 
 ### Comments
 

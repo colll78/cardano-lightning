@@ -67,13 +67,16 @@ stateDiagram-v2
     [*] --> Opened : open
     Opened --> Opened : add
     Opened --> Closed : close
-    Closed --> Resolved : resolve
+    Closed --> Responed : respond
+    Responded --> Resolved : resolve
+    Closed --> Elapsed : elapse
+    Elapsed --> Resolved : recover
     Closed --> Closed : free
     Resolved --> Resolved : free
-    Resolved --> [*] : end
-    Closed --> Elapsed : elapse
+    Responded --> Responded : free
     Elapsed --> Elapsed : free
-    Elapsed --> [*] : recover
+    Responded --> [*] : end
+    Resolved --> [*] : end
 ```
 
 Nodes are stages; arrows are steps.

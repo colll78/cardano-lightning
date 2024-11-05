@@ -42,16 +42,17 @@ transacting that have a direct bearing on the L1.
 
 ### Overview
 
-#### Cheque
+#### Cheques
 
 A cheque is a sent from one partner of the channel to the other and indicates
 that the amount of funds owed from the sender to the receiver. Cheques make up a
 core part of the off-chain transacting and are used when settling the L2 state
 on the L1.
 
-There are two types of cheque: normal, and locked. Locked cheques are valid (on
-settling) only if some other conditions are met. For now we only consider Hash
-Time Lock Contract (Htlc) type locked cheques.
+There are two types of cheque: normal and locked. Locked cheques are valid (at
+settle) only if some given conditions are met. For now we only consider Hash
+Time Lock Contract (Htlc) type locked cheques, but with an eye on 
+variations such as the Point Time Lock Contract. 
 
 ```haskell
 data Index = Int -- >=0
@@ -128,16 +129,19 @@ signing of txs on Cardano.
 There is a process by which a locked cheque is 'replaced' into a normal cheque.
 We call this 'normalising' a cheque.
 
-An Htlc cheque can be settled if the deadline has not passed, and the receiver
-knows the secret. In such case, the receiver can construct settle using the
-`NonLockedCheque` type. However, this would require closing the channel.
+If a receiver of a locked cheque knows the secret preimage of the lock
+prior to the locked cheques deadline, then they are capable of claiming the associated funds. 
+If they wait until after the deadline, they are no longer able to claim the funds.
+To avoid the unnecessary closure of the channel, the receiver demonstrates they know the secret
+and request normalising the cheque. 
 
-Thus if a sender wishes for the channel to remain open, they must normalise the
+The sender, wishing for the channel to remain open, normalises the
 cheque. The sender sends a signed normal cheque with the same index and amount
 as the locked one. The normal cheque can be settled at any time.
 
-If the sender fails to normalise a locked cheque then the receiver should close
-the channel, settling the cheque.
+If the sender of the locked cheque does not comply in good time,
+the receiver should proceed by closing the channel and claiming the funds with the secret.
+In such case, the receiver can construct settle using the `NonLockedCheque` type.
 
 Note that in a settle, submitted cheque must have unique indices. The receiver
 could not use both the locked and normal cheque.
@@ -150,16 +154,6 @@ and can facilitate features such as parallel stream payment.
 
 Note that in a settle, submitted cheque must have unique indices. The receiver
 could use only the cheque of greatest value per index.
-
-##### Maybe unlocked cheques
-
-At a settle, the partner may know the conditions for unlocking a locked cheque.
-Together with their unaccounted for normal and locked cheques, they provide
-these as unlocked cheques. For HTLC cheques, a 'secret' is required that when
-hashed equals the lock.
-
-Different hashing regimes are supported. These should be attached to the cheque,
-not the secret.
 
 #### Snapshot
 
@@ -220,7 +214,7 @@ partner should only sign and accept monotonically increasing snapshots. That is,
 in which the squash amounts are increasing.
 
 Once a cheque is included in a snapshot, it is accounted for. It is unsafe for a
-partner to accept an accounted for cheque, since it cannot be used in a settle.
+partner to accept a cheque that has been accounted for since it cannot be used in a settle.
 
 ##### Signing snapshots
 
@@ -231,13 +225,16 @@ Signed snapshots should be exchanged periodically.
 
 ##### Handling snapshots
 
-There is not a unique way for a partner to form a snapshot. For example, one
-partner. The criteria of what is deemed an acceptable snapshot is to be worked
-out elsewhere. If a partner is unhappy with a snapshots provided, they should
-close the channel.
+There is not a unique way for a partner to form a snapshot.
+The precise criteria of what is deemed an acceptable snapshot for a given participant 
+in a particular context is to be worked out elsewhere. 
+If a partner is unhappy with a snapshot provided,
+and they cannot resolve this issue with their partner, they should close the channel.
 
-Note that once a cheque is accounted for in a snapshot, it should not be raised.
-A partner should not accept a cheque already accounted for.
+A partner should only accept cheques that can be settled together with the last 
+acceptable snapshot they received from their partner. 
+There will be a limit on the number of cheques that can be handled in a settle. 
+The exact numbers will be established elsewhere. 
 
 #### Receipt
 
@@ -254,16 +251,40 @@ A valid receipt will include a valid signed snapshot, and list of valid signed
 non-locked cheques and valid locked cheques. Moreover, the cheques must have
 unique indices and are all unaccounted for in the snapshot.
 
+The logic should fail if the indicies of the `MCheque`s are not strictly increasing. 
+
 #### Datum
+
+A digression. Abstractions are generally not free of costs.
+Cardano script execution is a highly constrained environment, 
+where costs and execution limits are immediately a cause for concern. 
+For that reason implementation details we'd like to ignore
+must unfortunately encroach on design.
+
+For a validator employed with a spend purpose to learn its own script hash, 
+it must: 
+
+- extract its own output reference from its args, 
+- find the input with matching output reference, 
+- extract the hash from the payment credentials.
+
+All this is relatively expensive.
+It is much cheaper to access the data from the datum, which is present as an argument. 
+
+```haskell
+data ScriptHash = ByteArray -- 28 bytes 
+data Datum = (ScriptHash, Datum)
+```
 
 The channel datum has the following form
 
 ```haskell
-data Datum
+data Stage
   = Opened OpenedParams
   | Closed ClosedParams
   | Resolved ResolvedParams
   | Elapsed ElapsedParams
+  | Pend
 ```
 
 The constructors follow the stages of the lifecycle.
@@ -271,53 +292,35 @@ The constructors follow the stages of the lifecycle.
 ```haskell
 type VerificationKey = ByteString -- 32 bytes,
 
+type Keys = (VerificationKey, VerificationKey)
+
 data OpenedParams = OpenedParams
-  { vk0 :: VerificationKey
-  , vk1 :: VerificationKey
+  { keys :: Keys
   , amt1 :: Amount
   , snapshot :: Snapshot
 }
 
-
 data LockedChequeReduced = HtlcRed Amount Deadline Lock
 
 data ClosedParams = ClosedParams
-  { closer :: VerificationKey
-  , other :: VerificationKey
-  , amtCloser :: Amount
-  , deadline :: Deadline
+  { keys :: Keys
+  , amt0 :: Amount
   , snapshot :: Snapshot
-  , lcrsCloser :: [LockedChequeReduced]
+  , deadline :: Deadline
+  , pending0 :: [LockedChequeReduced]
 }
 
-Snapshot 400000 123 [23 113] 4423 [432] -- vk0 -> vk1
-Snapshot 440000 123 [113] 4423 [432] -- Normalization
-
-s0 -> Snapshot (400000 8 [6]) (1232103 12 []) -- vk0 -> vk1
-s1 -> Snapshot (440000 10 [9]) (1238278 4 [3]) -- vk1 -> vk0
-s0 AND s1 ~> Snapshot (440000 10 [9]) (1232103 12 [])
-
-Snapshot 460000 123 [23 113] 4423 [432] -- Illegal!
-Snapshot 450000 123 [133] 4423 [432] -- Illegal!
-Snapshot 500000 124 [123 23 133] 4423 [432] -- Illegal!
-
-  = case (compare idx00 idx01 , compare ex00 exc01 , compare idx10 idx11 , compare exc10 exc11)  of
--- ! Increasing
-isLaterThan (Snapshot _ idx00 exc00 idx10 exc10) (Snapshot _ idx01 exc01 idx11 exc11)
-  = case (compare idx00 idx01 , compare ex00 exc01 , compare idx10 idx11 , compare exc10 exc11)  of
-    (Less, _ , Less, _) -> False
-    (Greater, _ , Greater, _) -> True
-    (Equal, Less, Less, _) -> False
-    _ -> False
-
-
-
 data ResolvedParams = ResolvedParams
-  { closer :: VerificationKey
+  { keys :: VerificationKey
+  , amt0 :: Amount
+  , pending0 :: [LockedChequeReduced]
+  , pending1 :: [LockedChequeReduced]
 }
 
 data ElapsedParams = ElapsedParams
-  { other :: VerificationKey
+  { keys :: VerificationKey 
+  , other :: VerificationKey
+  , lcrs0 :: [LockedChequeReduced]
 }
 ```
 

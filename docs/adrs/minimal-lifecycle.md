@@ -1,7 +1,9 @@
 ---
 title: "minimal lifecycle"
 status: proposed
-authors: "@waalge"
+authors:
+  - "@waalge"
+  - "@paluh"
 date: 2024-10-06
 tags:
   - lifecycle
@@ -66,8 +68,11 @@ stateDiagram-v2
     Opened --> Opened : add
     Opened --> Closed : close
     Closed --> Resolved : resolve
+    Closed --> Closed : free
+    Resolved --> Resolved : free
     Resolved --> [*] : end
     Closed --> Elapsed : elapse
+    Elapsed --> Elapsed : free
     Elapsed --> [*] : recover
 ```
 
@@ -94,6 +99,9 @@ The other participant is able to perform a **resolve** step. They provide their
 summary to the L1, and can then unlock the funds they are due. The channel is
 now in the **resolved** stage.
 
+Both a close and a resolve step are **settle** steps, so called because it is
+when the partner "settles" their L2 state on the L1.
+
 From the resolved stage, the participant that performed the close can finally
 **end** the channel. In doing, the channel is unstaged and all remaining funds
 are unlocked.
@@ -107,20 +115,19 @@ now in the **elapsed** stage.
 From the elapsed stage, the other participant can perform a **recover** step.
 This unstages the channel and unlocks the remaining funds.
 
-### Handling locked cheques
+### Freeing locked cheques
 
-There is a important scenario overlooked in the above simplification, that must
-now be considered.
+There is a important aspect overlooked in the above that must now be considered.
 
 The off-chain transacting can involve 'locked cheques'. Theses are cheques that
 are valid only if some conditions are satisfied. It will not necessarily be
 known at a close or a resolve step which partner should ultimately own the
 associated funds.
 
-If the partner performing a close or resolve step has locked cheques, these are
-included in the step. A new output is created associated with each locked
-cheque. The output is spendable by the partner able to meet the conditions.
-There is no thread token.
+If the partner performing a settle includes locked cheques as part of their L2
+state. Theses are recorded on the L1 until one partner can claim the associated
+value. These is done via a **free** step. It is possible to perform a **free**
+step on any stage passed a close.
 
 ### Rationale
 

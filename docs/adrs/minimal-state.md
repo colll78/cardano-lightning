@@ -273,7 +273,7 @@ It is much cheaper to access the data from the datum, which is present as an arg
 
 ```haskell
 data ScriptHash = ByteArray -- 28 bytes 
-data Datum = (ScriptHash, Datum)
+data Datum = (ScriptHash, Keys, Stage)
 ```
 
 The channel datum has the following form

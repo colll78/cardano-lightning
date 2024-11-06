@@ -68,8 +68,8 @@ stateDiagram-v2
     %% Opened --> Opened : add
     Opened --> Closed : close
     Closed --> Responded : respond
-    Responded --> Resolved : resolve
     Resolved --> [*] : end
+    Responded --> Resolved : resolve
 
     Closed --> Elapsed : elapse
     Elapsed --> Resolved : recover

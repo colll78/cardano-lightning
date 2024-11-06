@@ -65,7 +65,7 @@ title: Minimal channel lifecycle diagram in stages and steps
 ---
 stateDiagram-v2
     [*] --> Opened : open
-    Opened --> Opened : add
+    %% Opened --> Opened : add
     Opened --> Closed : close
     Closed --> Responded : respond
     Responded --> Resolved : resolve
@@ -76,10 +76,10 @@ stateDiagram-v2
 
     Responded --> [*] : end
 
-    Closed --> Closed : free
-    Resolved --> Resolved : free
-    Responded --> Responded : free
-    Elapsed --> Elapsed : free
+    %% Closed --> Closed : free
+    %% Resolved --> Resolved : free
+    %% Responded --> Responded : free
+    %% Elapsed --> Elapsed : free
 ```
 
 Nodes are stages; arrows are steps.

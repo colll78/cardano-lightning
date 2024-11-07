@@ -55,8 +55,9 @@ Time Lock Contract (Htlc) type locked cheques, but with an eye on
 variations such as the Point Time Lock Contract. 
 
 ```haskell
-data Index = Int -- >=0
-data Amount = Int
+type Index = Int -- >=0
+type Amount = Int
+type Expiry = Int -- Posix timestamp
 
 data Normal
   = Normal Index Amount
@@ -69,7 +70,7 @@ data Lock
   | Sha3256Lock Hash32
 
 data Locked
-  = Htlc Index Amount Deadline Lock
+  = Htlc Index Amount Expiry Lock
 
 data Cheque
   = NormalCheque Normal
@@ -86,8 +87,7 @@ data MCheque
   | MUnlocked Unlocked
 
 type Sig64 = ByteString -- 64 bytes
-
-data Signature = Sig64
+type Signature = Sig64
 
 data Signed T = Signed T Signature
 ```
@@ -98,7 +98,7 @@ On receiving a signed cheque, the receiver verifies that it is acceptable:
 - the index is not yet accounted for in an existing snapshot
 - the amount is sufficient for their expectation
 - if the check is locked, then other conditions are satisfied such as the
-  deadline is sufficiently far into the future.
+  expiry is sufficiently far into the future.
 
 ##### Signing cheques
 
@@ -130,8 +130,8 @@ There is a process by which a locked cheque is 'replaced' into a normal cheque.
 We call this 'normalising' a cheque.
 
 If a receiver of a locked cheque knows the secret preimage of the lock
-prior to the locked cheques deadline, then they are capable of claiming the associated funds. 
-If they wait until after the deadline, they are no longer able to claim the funds.
+prior to the locked cheques expiry, then they are capable of claiming the associated funds. 
+If they wait until after the expiry, they are no longer able to claim the funds.
 To avoid the unnecessary closure of the channel, the receiver demonstrates they know the secret
 and request normalising the cheque. 
 
@@ -176,20 +176,21 @@ data Squash =
 data Snapshot = Snapshot
   { sq0 :: Squash
   , sq1 :: Squash
-  }
+}
 ```
 
 A **squash** gets its name from representing a set of cheques 'squashed' into a
 smaller piece of data.
 
-The `amt` is the cumulative total of all cheques of index `idx` or less that do
-not appear in the exclusion list `exc`.
+The `amt` is the cumulative total of all cheques of index **strictly less** than `idx`
+and that do not appear in the exclusion list `exc`.
+In particular a cheque with index `>= idx` is unaccounted for. 
 
 To be considered wellformed `exc` is a monotonically increasing list of indices
-that are strictly less than `idx`.
+that are strictly less than `idx - 1`.
 
-`sq0` represents all the cheques _received_ by the partner of key `vk0`. Thus
-the `sq0 .^ amt` is the amount `vk0` is owed by `vk1`.
+`sq0` represents all the cheques _received_ by the opener ie partner of key `vk0 = fst keys`. 
+Thus the `sq0 .^ amt` is the amount `vk0` is owed by `vk1`.
 
 A partner should only send squashes with values monotonically increasing in
 amount.
@@ -200,12 +201,12 @@ introduce an operation to unify two snapshots. Snapshots can be unioned by
 taking the respective squashes with greatest amount.
 
 ```haskell
+max :: Squash -> Squash -> Squash
+max sq0 sq1 = (sq0 .^ amt) < (sq1 .^ amt) ? sq1 :? sq0 
+
 unionSnapshot :: Snapshot -> Snapshot -> Snapshot
 unionSnapshot (Snapshot sq00 sq10) (Snapshot sq01 sq11)
-  = Snapshot sq0 sq1
-    where
-      sq0 = (sq00 .^ amt) < (sq01 .^ amt) ? sq01 :? sq00
-      sq1 = (sq10 .^ amt) < (sq11 .^ amt) ? sq11 :? sq10
+  = Snapshot (max sq00 sq10) (max sq01 sq11)
 ```
 
 Note that this is not a symmetric operation. If the amount appearing in
@@ -241,7 +242,7 @@ The exact numbers will be established elsewhere.
 A receipt consists of a snapshot and unaccounted (maybe unlocked) cheques.
 
 ```haskell
-data Receipt = Receipt (Signed Snapshot) [(Signed MCheque)]
+data Receipt = Receipt (Maybe (Signed Snapshot)) [(Signed MCheque)]
 ```
 
 The receipt is used in a close or resolve step. It is constructed by the partner
@@ -251,7 +252,7 @@ A valid receipt will include a valid signed snapshot, and list of valid signed
 non-locked cheques and valid locked cheques. Moreover, the cheques must have
 unique indices and are all unaccounted for in the snapshot.
 
-The logic should fail if the indicies of the `MCheque`s are not strictly increasing. 
+The logic should fail if the indices of the `MCheque`s are not strictly increasing. 
 
 #### Datum
 
@@ -268,74 +269,99 @@ it must:
 - find the input with matching output reference, 
 - extract the hash from the payment credentials.
 
-All this is relatively expensive.
-It is much cheaper to access the data from the datum, which is present as an argument. 
+All this is relatively expensive and is quadratic in the number of inputs.
+It is cheaper to access the data from the datum, which is present as an argument,
+and this is linear in the number of arguments.
 
 ```haskell
 data ScriptHash = ByteArray -- 28 bytes 
+type VerificationKey = ByteString -- 32 bytes,
+type Keys = (VerificationKey, VerificationKey)
 data Datum = (ScriptHash, Keys, Stage)
 ```
 
+There are some scenarios where one of the two keys is no longer strictly necessary. 
+For example, elapsed stage with no pending locked cheques for the closer. 
+However, we do will not consider optimising for these niche cases.
+
+> ::: WARNING ::: 
+> The order in which the keys appears matters and can change on a close step. 
+> Details below. 
+
 The channel datum has the following form
+where the constructors follow the stages of the lifecycle.
 
 ```haskell
 data Stage
   = Opened OpenedParams
   | Closed ClosedParams
-  | Resolved ResolvedParams
+  | Responded RespondedParams
   | Elapsed ElapsedParams
-  | Pend
+  | Resolved ResolvedParams
 ```
 
-The constructors follow the stages of the lifecycle.
+The params are as follows
 
 ```haskell
-type VerificationKey = ByteString -- 32 bytes,
-
-type Keys = (VerificationKey, VerificationKey)
-
 data OpenedParams = OpenedParams
-  { keys :: Keys
-  , amt1 :: Amount
+  { amt1 :: Amount
   , snapshot :: Snapshot
-}
-
-data LockedChequeReduced = HtlcRed Amount Deadline Lock
-
-data ClosedParams = ClosedParams
-  { keys :: Keys
-  , amt0 :: Amount
-  , snapshot :: Snapshot
-  , deadline :: Deadline
-  , pending0 :: [LockedChequeReduced]
-}
-
-data ResolvedParams = ResolvedParams
-  { keys :: VerificationKey
-  , amt0 :: Amount
-  , pending0 :: [LockedChequeReduced]
-  , pending1 :: [LockedChequeReduced]
-}
-
-data ElapsedParams = ElapsedParams
-  { keys :: VerificationKey 
-  , other :: VerificationKey
-  , lcrs0 :: [LockedChequeReduced]
+  -- ^ defaults to `Snapshot (Squash 0 0 []) (Squash 0 0 [])`
 }
 ```
 
-Pending locked cheques are...
+- The keys are ordered `(opener, non-opener)`. 
+- `amt1` is the amount of channel funds that belong to the not-opener partner.
+Typically this will start at 0 as all funds are provided by the opener.
+However, this is not enforced and up to the partners to decide. 
+- `snapshot` provides the ability to place a lower bound for the eventual settled state. 
+This allows partners to know, and limit an upper bound on potential losses 
+in the case of some catastrophic failure. 
 
-The constructors of locked cheque reduced correspond to those of locked cheques.
-It is reduced since the index is not longer relevant and the amount is handled
-in the utxo value. What remains is the conditions of the lock.
+```haskell
+data LockedChequeReduced = HtlcRed Amount Expiry Lock
+data Pend = Pend Amount [LockedChequeReduced]
 
-A few remarks on some of the fields.
+data ClosedParams = ClosedParams
+  { amt0 :: Amount
+  , sq :: Squash 
+  , expiry :: Expiry
+  , pend :: Pend
+}
+```
 
-- `Opened .^ amt1` represents the amount of funds in the channel that belong to
-  the partner with key `Opened .^ vk1`.
-- Similarly `Closed .^ amtCloser` is the amount of funds that belong to the
-  partner with key `Closed .^ closer`.
+- The keys are ordered `(closer, non-closer)`. 
+This is the order in which they will remain for the rest of the lifecycle. 
+- `amt0` is the amount of the funds that belong to the closer, 
+according their receipt and the previous state.
+It does not reflect the receipt of the non-closer who is yet to settle.
+The calculation is described below.
+- `sq` is the latest squash for the non-closer, that is, the squash representing the cheques received by the `non-closer`. 
+- `expiry` is the time after which the closer may perform an `elapse` step
+- `pend` contains the relevant bits of information of any pending locked cheques.
+
+```haskell
+data ResolvedParams = ResolvedParams
+  { amt0 :: Amount
+  , pend0 :: Pend
+  , pend1 :: Pend
+}
+```
+
+- `amt0` has the same meaning as above, but now reflects the receipt provided by the non-closer partner. 
+- `pend0` - is the pending locked cheques received by the closer
+- `pend1` - is the pending locked cheques received by the non-closer
+
+
+```haskell
+
+
+
+data ElapsedParams = ElapsedParams
+  { pend :: Pend
+}
+```
+- `pend` - is the pending locked cheques received by the closer
 
 #### Redeemer
 
@@ -348,6 +374,7 @@ data Redeemer
   | Close CloseParams
   | Resolve ResolveParams
   | Elapse
+  | Recover
   | End
 ```
 
@@ -364,73 +391,84 @@ happens to the data. This is a first approximation of an L1 spec.
 
 #### L1 steps
 
+A step corresponds to a channel and tx. 
+A single transaction may step multiple channels simultaneously. 
+They are embarrassingly parallel. 
+
+Channels are distinguished by a thread token encoding the channel id. 
+The thread token name is determined by some seed input and cannot be re-minted.
+Details of the thread token are found in [channel-id](./channel-id.md).
+
+A (staged) channel is represented by a single utxo at time at any one time.
+All steps that do not unstage the channel have a _continuing output_, 
+the output of the transaction containing the thread token.
+It necessarily has the following properties: 
+
+- After the open, the continuing output must be at the same address as the input. 
+- The value is either (depending on the channel currency):
+  - the thread token and ada, or
+  - the thread token, min ada, and an amount of the currency token
+- The datum is an inlined datum.
+
+The amount in the channel utxo of the channel currency is called the **total funds**.
+
+Each transaction is signed by precisely one of the partners. 
+Any snapshot or cheque provided as part of that transaction 
+will require the signature of the other partner.
+
+In the following we take this as given.
+We may frame the conditions in terms of the change between the input and continuing output. 
+
 ##### Open
 
 On an `open`:
 
 - the thread token is minted.
-- the outputs contain channel utxo with
-  - the address equal to script address (ignoring staking)
-  - the value is either, depending on the channel currency:
-    - the thread token and ada, or
-    - the thread token, min ada, and an amount of the currency token
-  - the datum is `Opened`.
+- the continuing output has
+  - the address is equal to script address (ignoring staking)
+  - the stage is `Opened`.
 
-`vk0` belongs to the partner performing the open. `vk1` belongs to the other
-partner and has been communicated off-chain.
+`vk0 = fst keys` belongs to the opener. 
+`vk1` belongs to the non-opener and has been communicated off-chain.
 
-The partner (who did not open the channel) has yet to partake in the channel.
+The non-opener has yet to partake in the channel.
 Thus none of their funds are at risk.
 
-Before stepping the channel themselves, the partner will have checked that the
-state is good. For example, the channel has sufficient funds. Typically, the
-datum will have the value
-
-```haskell
-OpenedParams vk0 vk1 0 (Snapshot 0 0 [] 0 [])
-```
-
+Before stepping the channel themselves, the non-opener will have checked that the
+state is good. For example, the channel has sufficient funds. Typically, the stage 
+will include the default snapshot. 
 However, there are no constraints on this. For example, it is possible to open
 with a fee to the partner by setting `amt1 > 0`.
-
-The thread token name is determined by some seed input and cannot be re-minted.
-
-For all future steps, the _continuing output_ is the output of the transaction
-containing the thread token. It must be at the same address as the input. The
-datum is an inlined datum.
 
 ##### Add
 
 On an `add`:
 
-- The tx is signed by exactly one of the partners
-- The total funds of the continuing output has increased by `x >= minIncrease`.
-- For the continuing datum
-  - the keys are unchanged
-  - If the signer is `vk0`, then `amt1` is unchanged else the `amt1` is
-    increased by `x`.
-  - If a signed snapshot is provided and
+- The total funds has increased by `x >= minIncrease`.
+- If the tx is signed by `vk0` 
+  - then the continuing `amt1` is unchanged
+  - else it is `amt1 + x`.
+- If a signed snapshot is provided then continuing snapshot is the snapshot union. 
 
-Exactly one of the two partners is involved in the transaction.
-
-No funds can be removed. The `minIncrease` prevents spam additions.
+No funds can be removed. 
+The `minIncrease` prevents spam additions.
 
 #### Close
 
 On a `close`:
 
-- The tx is signed by `closer`, who is one of the partners.
-- The receipt is valid with respect to the other partners key, `other`. The
-  total is of `t` funds.
 - The transaction has validity range with upper bound `ub`.
 - The continuing value has at least the same funds
+- The receipt is valid with respect to the other partners key, `other`. The
+  total is of `t` funds.
 - The continuing datum has
   `ClosedParams closer other amtCloser (ub + resolutionPeriod)` where
   `amtCloser` is
   - if `closer == vk0`, then `(total - amt) + t`
   - else `amt + t`
 
-Exactly one of the two partners is involved in the transaction.
+> ::: WARNING :::
+> The keys are now ordered by `(closer, non-closer)`. 
 
 No funds are removed.
 

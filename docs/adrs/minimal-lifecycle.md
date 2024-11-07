@@ -63,18 +63,27 @@ A staged channel will be at a **stage** in its lifecycle. A step may:
 ---
 title: Minimal channel lifecycle diagram in stages and steps
 ---
+%% FIXME :: mermaid rendering issues with arrow from an to the same node
+%% These are commented out for now.
+%% see https://github.com/mermaid-js/mermaid/issues/5820
 stateDiagram-v2
+    Opened
+    Closed
+    Responded
+    Elapsed
+    Resolved
+
     [*] --> Opened : open
     %% Opened --> Opened : add
     Opened --> Closed : close
     Closed --> Responded : respond
-    Resolved --> [*] : end
     Responded --> Resolved : resolve
+    Resolved --> [*] : end
 
     Closed --> Elapsed : elapse
-    Elapsed --> Resolved : recover
+    %% Elapsed --> Elapsed : recover
 
-    Responded --> [*] : end
+    %% Responded --> [*] : end
 
     %% Closed --> Closed : free
     %% Resolved --> Resolved : free
@@ -84,56 +93,78 @@ stateDiagram-v2
 
 Nodes are stages; arrows are steps.
 
-One participant initiates an **open** step. This stages a channel into its
+One partner initiates an **open** step. This stages a channel into its
 **opened** stage. This is the main stage of the channel. In the open step the
-participant locks funds at the utxo as guarantee of their off-chain transacting.
-During this stage participants are actively transacting with each other
-off-chain.
+partner locks funds at the utxo as guarantee of their off-chain transacting.
+During this stage partners are actively transacting with each other off-chain.
 
-While the channel is opened, either participant may perform an **add** step.
-This does not change the stage of the channel. There is no limit to how many add
-steps can be performed. The participant locks more funds in the channel as
-further guarantee of their off-chain transacting.
+While the channel is opened, either partner may perform an **add** step. This
+does not change the stage of the channel. There is no limit to how many add
+steps can be performed. The partner locks more funds in the channel as further
+guarantee of their off-chain transacting.
 
-Once a participant no longer wishes to continue the arrangement they perform a
-**close** step. The channel is now **closed**. In the close the participant
-includes a summary of their off-chain transacting. They should no longer be
-transacting off-chain beyond this point. The time window for the other
-participant to provide their summary begins. There are two possible next steps.
+Once a partner no longer wishes to continue the arrangement they perform a
+**close** step. The channel is now **closed**. In the close the partner, called
+the **closer**, includes a summary of their off-chain transacting. They should
+no longer be transacting off-chain beyond this point.
 
-The other participant is able to perform a **resolve** step. They provide their
-summary to the L1, and can then unlock the funds they are due. The channel is
-now in the **resolved** stage.
+On a close of a channel, the respond period begins. The length of this period is
+a property of the script, and known by partners on an open.
 
-Both a close and a resolve step are **settle** steps, so called because it is
+The other partner is able to perform a **respond** step. They provide their
+summary to the L1, and can then remove the funds they are due. The channel is
+now in the **responded** stage.
+
+Both a close and a respond step are **settle** steps, so called because it is
 when the partner "settles" their L2 state on the L1.
 
-From the resolved stage, the participant that performed the close can finally
-**end** the channel. In doing, the channel is unstaged and all remaining funds
-are unlocked.
+From the responded stage, the closer can **resolve** the channel. In doing, they
+are able to remove the funds they are owed. This action may result in one of two
+outcomes. If there are no outstanding locked cheques, then the channel is
+unstaged. However, if there are outstanding locked cheques, then the channel is
+now in a resolved stage.
 
-Alternatively, the participant who performed the close step may perform an
-**elapse** step. This is valid only after the aforementioned time window has
-elapsed without the other participant performing a resolve. The step allows the
-participant to unlock the funds they demonstrated they were due. The channel is
-now in the **elapsed** stage.
+Alternatively, if no respond has occurred by the end of the respond period, then
+the closer can perform an **elapse** step. The partner is able to remove the
+funds they demonstrated they are owed. If this is essentially the entire channel
+funds, then this step is terminal. Otherwise the channel is now in an
+**elapsed** stage.
 
-From the elapsed stage, the other participant can perform a **recover** step.
-This unstages the channel and unlocks the remaining funds.
+After an elapse, the partner that failed to provide a respond step, can now
+perform a **recover** step. If there are no pending locked cheques, then the
+channel is unstaged. If there are pending locked cheques, then the channel
+remains in an elapsed stage.
 
 ### Freeing locked cheques
 
-There is a important aspect overlooked in the above that must now be considered.
+There is a important aspect hinted in the above that must now be considered.
 
 The off-chain transacting can involve 'locked cheques'. Theses are cheques that
 are valid only if some conditions are satisfied. It will not necessarily be
-known at a close or a resolve step which partner should ultimately own the
-associated funds.
+known at a settle step which partner should ultimately own the associated funds.
 
-If the partner performing a settle includes locked cheques as part of their L2
+The partner performing a settle includes the locked cheques as part of their L2
 state. Theses are recorded on the L1 until one partner can claim the associated
-value. These is done via a **free** step. It is possible to perform a **free**
-step on any stage passed a close.
+funds. If a partner is able to demonstrate they are owed the associated funds,
+they can perform a **free** step. It is possible to perform a free step on any
+stage passed a close.
+
+From a closed stage, only the closer has settled, so only they can perform a
+free. The funds associated to a freed cheque are not released, but added to
+their balance.
+
+From a responded stage, the closer should resolve the channel to a resolved
+stage. Regardless, either partner can perform a free step. The associated funds
+are released immediately.
+
+From a resolved stage either partner may perform a free step. The funds are
+released.
+
+From an elapsed stage, again only the closer has settled, so only they can
+perform a free. Since the non-closer failed to provide their receipt in a timely
+fashion, any funds associated to pending locked cheques they have received will
+not have been considered when releasing the opener their funds. For the closer,
+the funds associated to a freed cheque are immediately released.
 
 ### Rationale
 
@@ -174,13 +205,12 @@ It's been mooted that close includes the approved output address.
 #### Unilateral-ness
 
 The steps chosen are unilateral actions - they do not require any cooperation
-between the participants. Moreover the steps chosen expect a participant to look
-after only their own funds. The script is present to keep both participants
-safe.
+between the partners. Moreover the steps chosen expect a partner to look after
+only their own funds. The script is present to keep both partners safe.
 
-For example, we could have chosen that the resolve step unstages the channel,
-and that the script ensures that both participants receive the funds they are
-due. This is feasible and in some sense simpler, with respect to fewer steps.
+For example, we could have chosen that the respond step unstages the channel,
+and that the script ensures that both partners receive the funds they are due.
+This is feasible and in some sense simpler, with respect to fewer steps.
 However, it introduces additional complexities into the script. Naively
 implemented, it would introduce the potential of double satisfaction attacks.
 
@@ -188,7 +218,19 @@ We may revisit this in future.
 
 ### Considered Alternatives
 
-\-
+#### De-threading pending cheques
+
+We contemplated splitting the pending cheques into a separate thread. There are
+some advantages to this.
+
+It compounds the problem of min ada - which exists for single thread, but
+becomes 40 times worse if, say, locked cheques must be split off into their own
+inputs on a settle, and support 40 outputs.
+
+A single separate thread for each partners pending cheques is another option.
+Ultimately, it was judged to just move the complexity, while introducing new
+questions (eg will we need additional thread tokens if we choose to use thread
+tokens).
 
 ## Consequences
 

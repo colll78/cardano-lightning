@@ -379,12 +379,13 @@ data Redeemer
   | Add AddParams
   | Close CloseParams
   | Resolve ResolveParams
-  | Elapse
-  | Recover
+  | Elapse ElapseParams
+  | Recover RecoverParams
+  | Free FreeParams
   | End
 ```
 
-FIXME :: What are these params
+We will make these explicit in the spec.
 
 ### Rationale
 
@@ -471,12 +472,29 @@ On a `close`:
 - The keys are possibly reordered to be `(closer, non-closer)`.
 - The receipt is valid (see above).
 - The continuing stage is `ClosedParams amt0 sq expiry pend` where
-  - `amt0` is a calculated by a function that is slightly involved ... FIXME
+  - `amt0` is a calculated by
+    - the amount already recorded (either `total - amt1` if the closer is also
+      the open, else `amt1`)
+    - plus the difference of squashes in the latest snapshot (correctly signed)
+    - plus the additional cheques not yet accounted for excluding pending
+      cheques.
   - `sq` is the latest squash corresponding to the non-closer
   - `expiry >= ub + respondPeriod`
   - `Pend p0 lcrs = pend`, where `p0` is the total of all the locked cheques
     presented in the receipt, and the lcrs is no greater in length than
     `maxLockedCheques`.
+
+The amount calculation.
+
+```haskell
+  amt0 = prev + new + cheque
+    where
+      is0 = closer == vk0
+      prev = if is0 then (total - amt1) else amt1
+      diff = (snapshot .^ sq0 .^ amt - snapshot .^ sq1 .^ amt )
+      new = if is0 then diff else (- diff)
+      cheque = foldl mc
+```
 
 No funds are removed.
 
@@ -491,14 +509,20 @@ limits. They must perform a `close` step before the number of cheques in their
 possession exceeds these limits. If they do not, they put only their own funds
 at risk - not their partners.
 
-#### respond
+#### Respond
 
 On a `respond`:
 
-- The continuting value has `amt` funds, where `amt` is a calculated by a
-  function that is slightly involved ... FIXME
+- The continuing value has `amt` funds, where `amt` is a calculated by
+  - the previous total
+  - minus the new `amt0`
+  - minus the total of the closer's pending cheques
+  - minus the total of the non-closer's pending cheques
 - The continuing stage is `RespondedParams amt0 pend0 pend1` where
-  - `amt0` is calculated by ... FIXME
+  - `amt0` is a calculated by
+    - the previous `amt0`
+    - minus the difference of squashes if a new snapshot is provided.
+    - minus the total of the unaccounted for cheques.
   - `pend0` is pend list of the closer, potentially with expired cheques dropped
     and the total adjusted accordingly.
   - `pend1` is the pend list of the non-closer.
@@ -518,9 +542,9 @@ without hitting tx limits.
 On an `elapse`:
 
 - The tx validity range lowerbound `lb` and `lb > expiry`.
-- The continuing amount is (at least) `amt` calculated as ... FIXME .
-- The continuing stage is `Elapsed pend`, where `pend` is as the input, where
-  some locked cheques may be freed.
+- The continuing amount is `total - amt0 - freedAmt`.
+- The continuing stage is `Elapsed pend`, where `pend` is as the input, but
+  where some locked cheques may be freed with a total amount of `freedAmt`.
 
 The non-closer has failed to meet their obligation of providing their receipt.
 The closer may now release their funds.
@@ -545,13 +569,6 @@ There is no continuing output. The thread token is burnt.
 ### Comments
 
 \-
-
-#### Locked cheques
-
-There is a small extension required in the context of locked cheques. In this
-case, the cheque has valid signature, but also preimage and the deadline is
-after the upper bound. Again both partners are responsible for ensuring that
-their collection of cheques can be handled in a single `close` or `resolve`.
 
 ### Considered Alternatives
 

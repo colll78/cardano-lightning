@@ -62,7 +62,7 @@ A third [stage](#stage) of a [channel](#channel). It is the result of an
 
 ### end
 
-A [step](#step) that [unstages](#unstage) a [resolved](#resolved)
+A [step](#step) that [unstages](#unstage) a [responded](#responded)
 [channel](#channel). The participant that performed the [close](#close) unlocks
 their funds.
 
@@ -100,17 +100,22 @@ A [step](#step) that [unstages](#unstage) an [elapsed](#elapsed)
 [channel](#channel). The participant that did not perform the [close](#close)
 recovers their funds.
 
-### resolve
+### respond
 
 A [step](#step) that changes the [stage](#stage) from [closed](#closed) to
-[resolved](#resolved). This is performed by the [participant](#participant) who
+[responded](#responded). This is performed by the [participant](#participant) who
 did not performed the [close](#close) step. The participant supplies to their
 summary of the off-chain transacting to the L1 and unlocks their due funds.
 
-### resolved
+### respond period
+
+The time period after a [close](#close) step during which the [elapse](#elapse) can be
+performed. Please note that [respond](#respond) can be afer that deadline as well.
+
+### responded
 
 A third [stage](#stage) of a [channel](#channel). The participant who did not
-perform the [close](#close) performs a [resolve](#resolve) step where the
+perform the [close](#close) performs a [respond](#respond) step where the
 off-chain summary is provided to the L1. The participant unlocks the funds owed.
 
 ### stage

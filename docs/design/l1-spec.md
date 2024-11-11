@@ -32,10 +32,17 @@ Signposting:
 
 ## Design
 
-### Steps and stages
+### Overview
 
 CL consists of a single Plutus V3 validator executed in both `Mint` and `Spend`
 purpose.
+
+The business logic is entirely implemented when executed with `Mint` purpose.
+The `Spend` logic simply verifies the mint logic is executed. This is to
+minimize the number of traversals required over the inputs and outputs, when
+stepping multiple channels within a single tx.
+
+### Steps and stages
 
 A (staged) channel is represented by a utxo at tip at the script address bearing
 a thread token (see [channel id ADR](../adrs/channel-id.md) for more
@@ -266,7 +273,7 @@ fn next_output(cid : ChannelId, address : Address, outputs : List<Output>) -> (a
 All steps, except `open` require exactly one input. An `open` requires none. All
 steps that are not an `end` require a (single) continuing output.
 
-###### New input
+###### New output
 
 A new output is determined by the `seed` and (relative) output index.
 
@@ -367,7 +374,7 @@ FIXME...
 The processing of steps is coordinated by a function `do_step`.
 
 ```
-fn do_step(
+fn reduce(
   signers : List<Hash28>,
   lb : Bound,
   ub: Bound,

@@ -2,28 +2,122 @@
 
 This document covers the basic message structure and base protocol messages (like `init` and `ping-poing`) and peer channel protocol which is responsible for opening, closing, and maintaining a channel between two peers. In other words we loosely follow and cover the scope of the BLN [bolt#1](https://github.com/Lighting/bolts/blob/master/01-messaging.md) and [bolt#2](https://github.com/lightning/bolts/blob/master/02-peer-protocol.md) in this document. There are three phases: establishment, normal operation, and closing.
 
-## Base Protocol
+## Connection and the Message Serialization
 
 Each peer connection MUST use a single, shared link for all channel messages, with messages distinguished by their channel IDs.
-
-### Connection and the Message Serialization
 
 We assume that the secure communication channel is already established between two peers and that authentication of the partners nodes is done already. The authentication and the transport layer security is out of the scope of this document.
 
 We decided to use [Protocol Buffers](https://protobuf.dev/) for the message serialization so we use protobuf format to describe the messages. Some parts of the protocol rely on CBOR encoded structures (`cheque`, `snapshot` etc.) which are not directly exchanged but are rather reconstructed by both partners so only the signatures are exchanged. These payloads will be specified through separate CDDLs.
 
-### Basic Message Structure
+## Messages
 
-Each message is a protobuf message with the following structure:
+### Setup and Control
 
-```protobuf
-message Message {
-  uint32 type = 1;
-  bytes payload = 2;
-}
+#### `init`
+
+Once a connection is established, both peers MUST send an `init` message before any other messages. This is the first message revealing the features supported by the sending node.
+
+```haskell
+type Version = Integer
+
+data Init = Init
+    { version :: Version
+    -- We can add feature bits/flags later if needed
+    }
 ```
 
-### Messages
+A node:
+- MUST send `init` as the first Lightning message for any connection
+- MUST wait to receive `init` before sending any other messages
+- SHOULD reject unknown protocol versions by closing the connection
+
+#### The `error` and `warning` Messages
+
+For diagnosis and error handling, a node can tell its peer that something has gone wrong.
+
+```haskell
+data Error = Error
+  { channelId :: Maybe ChannelId -- When channel id is missing (empty bytestring) the error is related to the whole connection
+  , message :: Text
+  }
+
+data Warning = Warning
+  { channelId :: ChannelId
+  , message :: Text
+  }
+```
+
+A sending node:
+- SHOULD send `error` for protocol violations or internal errors that make channels unusable
+- SHOULD send `error` with unknown channelId in reply to messages related to unknown channels
+- when sending error: MUST fail the channel(s) referred to by the error message
+- when sending warning: MAY continue channel operation
+
+A receiving node:
+- upon receiving error:
+  - if channelId is emtpy bytestring: MUST fail all channels with the sending node
+  - otherwise: MUST fail the channel referred to by channelId
+- upon receiving warning:
+  - MAY continue channel operation
+
+##### Future Error Handling Design Note
+
+In future protocol versions, error handling will be formalized in one of two possible approaches:
+
+Global error enumeration:
+- A single enumeration covering all possible protocol errors
+- Each error would have a specific code and standardized meaning
+- Similar to HTTP status codes but specific to CL protocol
+```haskell
+data ProtocolError
+   = InvalidVersion
+   | UnknownChannel
+   | InvalidSignature
+   | InvalidState
+   -- etc.
+```
+
+Context-specific errors:
+- Each message type/operation would have its own error enumeration
+- Errors are tightly coupled to the context where they can occur
+- Provides more precise error handling and type safety
+``` haskell
+data OpenError
+    = UnsupportedParameters
+    | InvalidRange
+    ...
+data AcceptError
+    = InsufficientGift
+    ...
+```
+
+### The `ping` and `pong` Messages
+
+To allow for long-lived TCP connections and to detect unresponsive peers, nodes can send ping messages.
+
+```haskell
+data Ping = Ping
+  { ignored :: ByteString -- should be zeroes
+  }
+
+data Pong = Pong
+  { byteslen :: Word16 , ignored :: bytestring -- should be zeroes } ```
+
+A node:
+ - SHOULD set ignored to zeros
+- MUST NOT set ignored to sensitive data
+if it doesn't receive a corresponding pong:
+- MAY close the network connection
+- MUST NOT fail the channels in this case
+
+A node receiving ping:
+- if `numPongBytes` is less than 65532: MUST respond with a pong with bytesLen equal to numPongBytes
+- otherwise: MUST ignore the ping
+
+## Core Types
+
+These are core types used in different places of the protocol:
 
 ```haskell
 type Index = Integer
@@ -47,9 +141,185 @@ type Milliseconds = Integer
 
 type POSIX = Integer
 
--- TODO: This will be replaced by rather closed and long enum
---       with some extra payload
-type RejectionReason = String
+type TxOutRef = (ByteString, Integer)
+
+-- 32 bytes of sha256 hash
+type Sha256Hash = ByteString
+
+type Ed25519PubKey = ByteString
+
+-- 64 bytes of Ed25519 signature
+type Signature = ByteString
+
+data Snapshot = Snapshot
+  { amount0 :: Amount
+  , amount1 :: Amount
+  , idx0 :: Index
+  , idx1 :: Index
+  , exc0 :: [Integer]
+  , exc1 :: [Integer]
+  }
+```
+
+## Channel Establishment
+
+Channel establishment consists of several steps:
+1. Initial negotiation of channel parameters:  `Open` -> `Accept` || `Error`.
+2. On-chain channel notification and verification `ChannelStaged`.
+3. Or early canc
+
+### Messages
+
+```haskell
+-- Helper type for parameter negotiation
+data Range a
+  = Range
+    { minValue :: a
+    , maxValue :: a
+    }
+
+data ChannelEstablishment
+  | AcceptedRanges
+    { networkId :: NetworkId
+    , currencySymbol :: CurrencySymbol
+    , fundingAmount :: Range Amount
+    , requiredGift :: Amount
+    , respondPeriod :: Range Milliseconds
+    , minimumDepth :: Range Integer
+    , giftAmount :: Amount
+    , maxHtlcValue :: Range Amount
+    , maxTotalHtlcValue :: Range Amount
+    , maxHtlcCount :: Range Integer
+    }
+  | Open
+    { networkId :: NetworkId
+    , channelId :: ChannelId
+    , currencySymbol :: CurrencySymbol
+    , fundingAmount :: Range Amount  -- Min/max range for negotiation
+    , giftAmount :: Amount          -- Initial amount gifted to counterparty
+    , respondPeriod :: Range Milliseconds
+    , minimumDepth :: Range Integer
+    , minHtlcValue :: Range Amount
+    , maxHtlcValue :: Range Amount
+    , maxTotalHtlcValue :: Range Amount
+    , maxHtlcCount :: Range Integer
+    , pubKey :: Ed25519PubKey
+    }
+  | Accept
+    { channelId :: ChannelId
+    , fundingAmount :: Amount       -- Chosen from proposed range
+    , respondPeriod :: Milliseconds
+    , minimumDepth :: Integer
+    , minHtlcValue :: Amount
+    , maxHtlcValue :: Amount
+    , maxTotalHtlcValue :: Amount
+    , maxHtlcCount :: Integer
+    , pubKey :: Ed25519PubKey
+    }
+  | ChannelStaged
+    { channelId :: ChannelId
+    , txOutRef :: TxOutRef        -- Reference to the on-chain channel UTXO
+    }
+```
+
+### Channel Opening Process
+
+The channel opener sends an Open message containing:
+- Proposed ranges for all negotiable parameters
+- Their public key for channel operation
+- Initial funding and gift amounts
+- Network and currency identification
+
+The counterparty can:
+- Respond with `Accept` choosing specific values from each proposed range
+- Respond with `Error` if any parameters are unacceptable
+
+After successful negotiation, the opener:
+- Submits the transaction creating the channel utxo
+- Sends `ChannelStaged` with the UTXO reference
+  or:
+  Sends an `Error` with `channelId` and reason
+
+The counterparty:
+- Verifies the on-chain utxo matches negotiated parameters
+- Confirms with `ChannelStaged` and starts channel operation
+  or:
+  Responds with Error if verification fails
+
+Requirements
+A node sending Open:
+- MUST set all ranges to contain acceptable values
+- MUST ensure minimum values are less than or equal to maximum values
+- MUST set networkId to match the intended blockchain network
+- SHOULD set reasonable ranges to increase chance of acceptance
+
+A node receiving Open:
+
+MUST respond with either Accept or Error
+if responding with Accept:
+MUST choose values within each proposed range
+MUST verify it can operate with chosen parameters
+MUST NOT accept if any parameters are unacceptable
+SHOULD respond with Error if ranges are unreasonable
+A node sending Accept:
+
+MUST set all parameters to values within proposed ranges
+MUST be prepared to operate channel with chosen parameters
+A node receiving Accept:
+
+MUST verify all chosen values are within proposed ranges
+MUST NOT create channel if any parameters are outside ranges
+SHOULD proceed with channel creation if all parameters are acceptable
+A node sending ChannelStaged:
+
+MUST have created the on-chain UTXO
+MUST ensure UTXO matches all negotiated parameters
+A node receiving ChannelStaged:
+
+MUST verify the referenced UTXO exists on-chain
+MUST verify UTXO parameters match negotiated values
+MUST NOT begin channel operation until verification succeeds
+
+##### Future Terms Discovery Design Note
+
+```haskell
+data TermsDiscovery
+  = QueryTerms
+    { currency :: Currency
+    }
+  | Terms
+    { currency :: Currency
+    , minPeerFunding :: Amount       -- Minimum funding required from peer
+    , minGiftAmount :: Amount        -- Minimum "service fee" required
+    , operatingRanges :: OperatingRanges
+    , serviceFeatures :: ServiceFeatures  -- e.g. uptime guarantees, routing policies
+    }
+```
+
+
+### `ChannelAdd`
+￼
+```haskell
+type Index = Integer
+
+-- Should we introduce "feature flags" similar to BLN:
+data Version = Version1
+
+-- (28 bytes of blake2b hash, 32 bytes of token name)
+type Currency = (ByteString, ByteString)
+
+-- 32 bytes of some hash plus extra payload
+data ChannelId = ByteString
+
+type Amount = Integer
+
+type TestnetMagic = Integer
+
+data NetworkId = Mainnet | Testnet TestnetMagic
+
+type Milliseconds = Integer
+
+type POSIX = Integer
 
 type TxOutRef = (ByteString, Integer)
 
@@ -96,10 +366,6 @@ data Message
     = Init Version
     | Ping
     | Pong
-    | Reject
-        { channelId :: ChannelId
-        , reasons :: [RejectionReason]
-        }
     | Open
         { netorkId :: NetworkId
         , channelId :: ChannelId
@@ -205,14 +471,6 @@ data Message
 ```
 
 
-### Setup and Control
-
-#### `init`
-Copypasta bolt#1
-
-#### `ping` and `pong`
-Copypasta bold#2
-
 ## Channel Establishment
 
 ### `ChannelAdd
@@ -277,15 +535,16 @@ message Message {
     Init init = 1;
     Ping ping = 2;
     Pong pong = 3;
-    Reject reject = 4;
-    Open open = 5;
-    Accept accept = 6;
-    FundsAdded funds_added = 7;
-    AddHTLC add_htlc = 8;
-    FulfillHTLC fulfill_htlc = 9;
-    AddCheque add_cheque = 10;
-    SignedSnapshot signed_snapshot = 11;
-    ChannelClosed channel_closed = 12;
+    Error error = 4;
+    Warning warning = 5;
+    Open open = 6;
+    Accept accept = 7;
+    FundsAdded funds_added = 8;
+    AddHTLC add_htlc = 9;
+    FulfillHTLC fulfill_htlc = 10;
+    AddCheque add_cheque = 11;
+    SignedSnapshot signed_snapshot = 12;
+    ChannelClosed channel_closed = 13;
   }
 }
 

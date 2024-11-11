@@ -310,7 +310,7 @@ data OpenedParams = OpenedParams
 }
 ```
 
-- The keys are ordered `(opener, non-opener)`.
+- The keys should be ordered `(opener, non-opener)`.
 - `amt1` is the amount of channel funds that belong to the not-opener partner.
   Typically this will start at 0 as all funds are provided by the opener.
   However, this is not enforced and up to the partners to decide.
@@ -323,10 +323,10 @@ data LockedChequeReduced = HtlcRed Amount Expiry Lock
 data Pend = Pend Amount [LockedChequeReduced]
 
 data ClosedParams = ClosedParams
-  { amt0 :: Amount
-  , sq :: Squash
-  , expiry :: Expiry
-  , pend :: Pend
+  { amt0 :: amount
+  , sq :: squash
+  , expiry :: expiry
+  , pend :: pend
 }
 ```
 

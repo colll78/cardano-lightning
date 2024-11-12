@@ -31,11 +31,23 @@ A [step](#step) on a [opened](#opened) [channel](#channel) that increases the
 value of one of the [accounts](#account). Note that this step does not change
 the stage.
 
+### amount
+
+The preferred term for an integer representing an amount of funds. It is
+preferred over alternatives such as `value` and `quantity`.
+
 ### channel
 
 The fundamental link between two [participants](#participant) in the CL network.
 A channel (that [staged](#staged)) consists state on both the L1 and L2. It
 includes two accounts, one for each participant.
+
+### cheque
+
+An object exchanged on the L2 and used on the L1 to prove what funds are owed.
+
+There are two types of cheque: normal, and locked. Locked cheques and are valid
+(on settling) only if some other conditions are met.
 
 ### close
 
@@ -47,6 +59,11 @@ to end the [channel](#channel).
 
 The second [stage](#stage). It occurs after a [close](#close) step. The
 participants are no longer transacting off-chain (at least for long).
+
+### currency
+
+In relation to a [channel](#channel), the asset class which is being exchanged.
+The default currency is ada.
 
 ### elapse
 
@@ -68,15 +85,34 @@ their funds.
 
 ### funds
 
-The preferred term for assets in the channel that are locked as collateral on
-the L1. Use the term 'funds' over alternatives such as 'value', 'assets',
-'tokens', _etc_.
+The preferred term for amount of assets in the channel that are locked as
+collateral on the L1. Use the term 'funds' over alternatives such as 'value',
+'assets', 'tokens', _etc_.
 
-### life-cycle
+### L1
 
-In relation to a [channel](#channel), it is the series of [steps](#step). (This
-term is include mainly to document that the preferred form is as two words
-separated by a hyphen.)
+Shorthand for layer one ie the Cardano blockchain. It can also be used to refer
+to the part of the CL protocol that takes place on the Cardano blockchain, such
+as channel utxos and txs that step channels.
+
+### L2
+
+Shorthand for layer two, also called 'off-chain transacting'. Characterised by
+simply 'not L1', it includes messages passed between channel partners exchanging
+[cheques](#cheque) and [snapshots](#snapshot).
+
+### lifecycle
+
+In relation to a [channel](#channel), it is the series of [steps](#step).
+
+(This term is include mainly to document that the preferred form is as a single
+word.)
+
+### normalize
+
+In relation to [cheques](#cheque), it is an [L2](#l2) action that replaces a
+locked cheque with a normal cheque. The replacement cheque must share the same
+index, and generally shares the same amount.
 
 ### open
 
@@ -93,6 +129,11 @@ stage, the [participants](#participant) are transacting off-chain.
 
 Anyone using the CL network. In relation to a [channel](#channel), there are two
 participants.
+
+### partner
+
+In relation to a [channel](#channel), a synonym for [participant](#participant).
+This is the preferred term from the bitcoin ecosystem.
 
 ### recover
 
@@ -112,6 +153,22 @@ summary of the off-chain transacting to the L1 and unlocks their due funds.
 A third [stage](#stage) of a [channel](#channel). The participant who did not
 perform the [close](#close) performs a [resolve](#resolve) step where the
 off-chain summary is provided to the L1. The participant unlocks the funds owed.
+
+### settle
+
+The act of providing the [L2](#l2) state to the [L1](#l1). It occurs in both a
+[close](#close) step and a [resolve](#resolve) step.
+
+### signing key
+
+Ed25519 signing key. This is the preferred term over 'secret key' or 'private
+key'.
+
+### snapshot
+
+A data object that encapsulates the [L2](#L2) state in a way that can be handled
+by the [L1](#L1). It aggregates the amounts exchanged in [cheques](#cheque),
+condensing the data required to [settle](#settle).
 
 ### stage
 
@@ -148,3 +205,11 @@ value of one of the [accounts](#account). The channel remains opened.
 
 Any terminal [step](#step) ceases the channel. A [channel](#channel) that is no
 longer [staged](#staged) is ceased.
+
+### utxo
+
+Our preferred style of shorthand for unspent transaction output.
+
+### verification key
+
+Ed25519 verification key. This is the preferred term over 'public key'.

@@ -8,7 +8,8 @@
 
 ## Repo overview
 
-Currently we use monorepo approach for creating the preliminary specification and POC implementation. Later on we will split this into separate repositories.
+Currently we use monorepo approach for creating the preliminary specification
+and POC implementation. Later on we will split this into separate repositories.
 
 This repo uses nix flakes.
 

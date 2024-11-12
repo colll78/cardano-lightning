@@ -103,14 +103,16 @@ recovers their funds.
 ### respond
 
 A [step](#step) that changes the [stage](#stage) from [closed](#closed) to
-[responded](#responded). This is performed by the [participant](#participant) who
-did not performed the [close](#close) step. The participant supplies to their
-summary of the off-chain transacting to the L1 and unlocks their due funds.
+[responded](#responded). This is performed by the [participant](#participant)
+who did not performed the [close](#close) step. The participant supplies to
+their summary of the off-chain transacting to the L1 and unlocks their due
+funds.
 
 ### respond period
 
-The time period after a [close](#close) step during which the [elapse](#elapse) can be
-performed. Please note that [respond](#respond) can be afer that deadline as well.
+The time period after a [close](#close) step during which the [elapse](#elapse)
+can be performed. Please note that [respond](#respond) can be afer that deadline
+as well.
 
 ### responded
 

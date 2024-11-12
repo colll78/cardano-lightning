@@ -1,14 +1,30 @@
 # Cardano Lightning : L2 Peer Protocol Spec
 
-This document covers the basic message structure and base protocol messages (like `init` and `ping-poing`) and peer channel protocol which is responsible for opening, closing, and maintaining a channel between two peers. In other words we loosely follow and cover the scope of the BLN [bolt#1](https://github.com/Lighting/bolts/blob/master/01-messaging.md) and [bolt#2](https://github.com/lightning/bolts/blob/master/02-peer-protocol.md) in this document. There are three phases: establishment, normal operation, and closing.
+This document covers the basic message structure and base protocol messages
+(like `init` and `ping-poing`) and peer channel protocol which is responsible
+for opening, closing, and maintaining a channel between two peers. In other
+words we loosely follow and cover the scope of the BLN
+[bolt#1](https://github.com/Lighting/bolts/blob/master/01-messaging.md) and
+[bolt#2](https://github.com/lightning/bolts/blob/master/02-peer-protocol.md) in
+this document. There are three phases: establishment, normal operation, and
+closing.
 
 ## Connection and the Message Serialization
 
-Each peer connection MUST use a single, shared link for all channel messages, with messages distinguished by their channel IDs.
+Each peer connection MUST use a single, shared link for all channel messages,
+with messages distinguished by their channel IDs.
 
-We assume that the secure communication channel is already established between two peers and that authentication of the partners nodes is done already. The authentication and the transport layer security is out of the scope of this document.
+We assume that the secure communication channel is already established between
+two peers and that authentication of the partners nodes is done already. The
+authentication and the transport layer security is out of the scope of this
+document.
 
-We decided to use [Protocol Buffers](https://protobuf.dev/) for the message serialization so we use protobuf format to describe the messages. Some parts of the protocol rely on CBOR encoded structures (`cheque`, `snapshot` etc.) which are not directly exchanged but are rather reconstructed by both partners so only the signatures are exchanged. These payloads will be specified through separate CDDLs.
+We decided to use [Protocol Buffers](https://protobuf.dev/) for the message
+serialization so we use protobuf format to describe the messages. Some parts of
+the protocol rely on CBOR encoded structures (`cheque`, `snapshot` etc.) which
+are not directly exchanged but are rather reconstructed by both partners so only
+the signatures are exchanged. These payloads will be specified through separate
+CDDLs.
 
 ## Messages
 
@@ -16,7 +32,9 @@ We decided to use [Protocol Buffers](https://protobuf.dev/) for the message seri
 
 #### `init`
 
-Once a connection is established, both peers MUST send an `init` message before any other messages. This is the first message revealing the features supported by the sending node.
+Once a connection is established, both peers MUST send an `init` message before
+any other messages. This is the first message revealing the features supported
+by the sending node.
 
 ```haskell
 type Version = Integer
@@ -28,13 +46,15 @@ data Init = Init
 ```
 
 A node:
+
 - MUST send `init` as the first Lightning message for any connection
 - MUST wait to receive `init` before sending any other messages
 - SHOULD reject unknown protocol versions by closing the connection
 
 #### The `error` and `warning` Messages
 
-For diagnosis and error handling, a node can tell its peer that something has gone wrong.
+For diagnosis and error handling, a node can tell its peer that something has
+gone wrong.
 
 ```haskell
 data Error = Error
@@ -49,26 +69,34 @@ data Warning = Warning
 ```
 
 A sending node:
-- SHOULD send `error` for protocol violations or internal errors that make channels unusable
-- SHOULD send `error` with unknown channelId in reply to messages related to unknown channels
+
+- SHOULD send `error` for protocol violations or internal errors that make
+  channels unusable
+- SHOULD send `error` with unknown channelId in reply to messages related to
+  unknown channels
 - when sending error: MUST fail the channel(s) referred to by the error message
 - when sending warning: MAY continue channel operation
 
 A receiving node:
+
 - upon receiving error:
-  - if channelId is emtpy bytestring: MUST fail all channels with the sending node
+  - if channelId is emtpy bytestring: MUST fail all channels with the sending
+    node
   - otherwise: MUST fail the channel referred to by channelId
 - upon receiving warning:
   - MAY continue channel operation
 
 ##### Future Error Handling Design Note
 
-In future protocol versions, error handling will be formalized in one of two possible approaches:
+In future protocol versions, error handling will be formalized in one of two
+possible approaches:
 
 Global error enumeration:
+
 - A single enumeration covering all possible protocol errors
 - Each error would have a specific code and standardized meaning
 - Similar to HTTP status codes but specific to CL protocol
+
 ```haskell
 data ProtocolError
    = InvalidVersion
@@ -79,10 +107,12 @@ data ProtocolError
 ```
 
 Context-specific errors:
+
 - Each message type/operation would have its own error enumeration
 - Errors are tightly coupled to the context where they can occur
 - Provides more precise error handling and type safety
-``` haskell
+
+```haskell
 data OpenError
     = UnsupportedParameters
     | InvalidRange
@@ -94,9 +124,10 @@ data AcceptError
 
 ### The `ping` and `pong` Messages
 
-To allow for long-lived TCP connections and to detect unresponsive peers, nodes can send ping messages.
+To allow for long-lived TCP connections and to detect unresponsive peers, nodes
+can send ping messages.
 
-```haskell
+````haskell
 data Ping = Ping
   { ignored :: ByteString -- should be zeroes
   }
@@ -159,12 +190,13 @@ data Snapshot = Snapshot
   , exc0 :: [Integer]
   , exc1 :: [Integer]
   }
-```
+````
 
 ## Channel Establishment
 
 Channel establishment consists of several steps:
-1. Initial negotiation of channel parameters:  `Open` -> `Accept` || `Error`.
+
+1. Initial negotiation of channel parameters: `Open` -> `Accept` || `Error`.
 2. On-chain channel notification and verification `ChannelStaged`.
 3. Or early canc
 
@@ -225,29 +257,31 @@ data ChannelEstablishment
 ### Channel Opening Process
 
 The channel opener sends an Open message containing:
+
 - Proposed ranges for all negotiable parameters
 - Their public key for channel operation
 - Initial funding and gift amounts
 - Network and currency identification
 
 The counterparty can:
+
 - Respond with `Accept` choosing specific values from each proposed range
 - Respond with `Error` if any parameters are unacceptable
 
 After successful negotiation, the opener:
+
 - Submits the transaction creating the channel utxo
-- Sends `ChannelStaged` with the UTXO reference
-  or:
-  Sends an `Error` with `channelId` and reason
+- Sends `ChannelStaged` with the UTXO reference or: Sends an `Error` with
+  `channelId` and reason
 
 The counterparty:
-- Verifies the on-chain utxo matches negotiated parameters
-- Confirms with `ChannelStaged` and starts channel operation
-  or:
-  Responds with Error if verification fails
 
-Requirements
-A node sending Open:
+- Verifies the on-chain utxo matches negotiated parameters
+- Confirms with `ChannelStaged` and starts channel operation or: Responds with
+  Error if verification fails
+
+Requirements A node sending Open:
+
 - MUST set all ranges to contain acceptable values
 - MUST ensure minimum values are less than or equal to maximum values
 - MUST set networkId to match the intended blockchain network
@@ -255,30 +289,24 @@ A node sending Open:
 
 A node receiving Open:
 
-MUST respond with either Accept or Error
-if responding with Accept:
-MUST choose values within each proposed range
-MUST verify it can operate with chosen parameters
-MUST NOT accept if any parameters are unacceptable
-SHOULD respond with Error if ranges are unreasonable
-A node sending Accept:
+MUST respond with either Accept or Error if responding with Accept: MUST choose
+values within each proposed range MUST verify it can operate with chosen
+parameters MUST NOT accept if any parameters are unacceptable SHOULD respond
+with Error if ranges are unreasonable A node sending Accept:
 
-MUST set all parameters to values within proposed ranges
-MUST be prepared to operate channel with chosen parameters
-A node receiving Accept:
+MUST set all parameters to values within proposed ranges MUST be prepared to
+operate channel with chosen parameters A node receiving Accept:
 
-MUST verify all chosen values are within proposed ranges
-MUST NOT create channel if any parameters are outside ranges
-SHOULD proceed with channel creation if all parameters are acceptable
-A node sending ChannelStaged:
+MUST verify all chosen values are within proposed ranges MUST NOT create channel
+if any parameters are outside ranges SHOULD proceed with channel creation if all
+parameters are acceptable A node sending ChannelStaged:
 
-MUST have created the on-chain UTXO
-MUST ensure UTXO matches all negotiated parameters
-A node receiving ChannelStaged:
+MUST have created the on-chain UTXO MUST ensure UTXO matches all negotiated
+parameters A node receiving ChannelStaged:
 
-MUST verify the referenced UTXO exists on-chain
-MUST verify UTXO parameters match negotiated values
-MUST NOT begin channel operation until verification succeeds
+MUST verify the referenced UTXO exists on-chain MUST verify UTXO parameters
+match negotiated values MUST NOT begin channel operation until verification
+succeeds
 
 ##### Future Terms Discovery Design Note
 
@@ -296,9 +324,10 @@ data TermsDiscovery
     }
 ```
 
-
 ### `ChannelAdd`
+
 ￼
+
 ```haskell
 type Index = Integer
 
@@ -357,7 +386,7 @@ data Snapshot = Snapshot
 -- * In order to construct transaction on the client side we should:
 --      * Receive or reconstruct the transaction CBOR
 --      * Check the UTxO of that transaction
--- * Mithril will have probably in the future queries like "utxo-by-addresses" - it seems that they are not 
+-- * Mithril will have probably in the future queries like "utxo-by-addresses" - it seems that they are not
 -- part of the aggregator HTTP API yet. It seem rather useless in our case anyway.
 type Tx = ByteString
 
@@ -469,7 +498,6 @@ data Message
         { channelId :: ChannelId
         }
 ```
-
 
 ## Channel Establishment
 

@@ -57,7 +57,7 @@ such as the Point Time Lock Contract.
 ```haskell
 type Index = Int -- >=0
 type Amount = Int
-type Expiry = Int -- Posix timestamp
+type Timeout = Int -- Posix timestamp
 
 data Normal
   = Normal Index Amount
@@ -70,7 +70,7 @@ data Lock
   | Sha3256Lock Hash32
 
 data Locked
-  = Htlc Index Amount Expiry Lock
+  = Htlc Index Amount Timeout Lock
 
 data Cheque
   = NormalCheque Normal
@@ -97,8 +97,8 @@ On receiving a signed cheque, the receiver verifies that it is acceptable:
 - the sender's signature is correct
 - the index is not yet accounted for in an existing snapshot
 - the amount is sufficient for their expectation
-- if the check is locked, then other conditions are satisfied such as the expiry
-  is sufficiently far into the future.
+- if the check is locked, then other conditions are satisfied such as the
+  timeout is sufficiently far into the future.
 
 ##### Signing cheques
 
@@ -130,9 +130,9 @@ There is a process by which a locked cheque is 'replaced' into a normal cheque.
 We call this 'normalising' a cheque.
 
 If a receiver of a locked cheque knows the secret preimage of the lock prior to
-the locked cheques expiry, then they are capable of claiming the associated
-funds. If they wait until after the expiry, they are no longer able to claim the
-funds. To avoid the unnecessary closure of the channel, the receiver
+the locked cheques timeout, then they are capable of claiming the associated
+funds. If they wait until after the timeout, they are no longer able to claim
+the funds. To avoid the unnecessary closure of the channel, the receiver
 demonstrates they know the secret and request normalising the cheque.
 
 The sender, wishing for the channel to remain open, normalises the cheque. The
@@ -319,14 +319,14 @@ data OpenedParams = OpenedParams
   potential losses in the case of some catastrophic failure.
 
 ```haskell
-data LockedChequeReduced = HtlcRed Amount Expiry Lock
+data LockedChequeReduced = HtlcRed Amount Timeout Lock
 data Pend = Pend Amount [LockedChequeReduced]
 
 data ClosedParams = ClosedParams
-  { amt0 :: amount
-  , sq :: squash
-  , expiry :: expiry
-  , pend :: pend
+  { amt0 :: Amount
+  , sq :: Squash
+  , timeout :: Timeout
+  , pend :: Pend
 }
 ```
 

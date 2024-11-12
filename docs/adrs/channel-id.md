@@ -60,7 +60,7 @@ let name = "⚡" + cid
 
 where
 
-- `cid = take 20 $ blake2b_224 $ concat seed idx`
+- `cid = take 20 $ blake2b_256 $ concat seed idx`
 - `seed` is the oref of some input spent in the mint.
 - `idx` is the relative output index the minting tx outputs the thread token.
 

@@ -51,23 +51,19 @@ on the L1.
 
 There are two types of cheque: normal and locked. Locked cheques are valid (at
 settle) only if some given conditions are met. For now we only consider Hash
-Time Lock Contract (Htlc) type locked cheques, but with an eye on variations
-such as the Point Time Lock Contract.
+TimeLocked Contract (or Hashed Timelock Contract - Htlc) type locked cheques, but with an eye on variations
+such as the Point Timelocked Contract.
 
 ```haskell
 type Index = Int -- >=0
-type Amount = Int
+type Amount = Int -- >0
 type Timeout = Int -- Posix timestamp
 
 data Normal
   = Normal Index Amount
 
-type Hash32 = ByteString -- 32 bytes
-
 data Lock
-  = Blake2b256Lock Hash32
-  | Sha2256Lock Hash32
-  | Sha3256Lock Hash32
+  = Sha3256Lock ByteString
 
 data Locked
   = Htlc Index Amount Timeout Lock
@@ -78,18 +74,19 @@ data Cheque
 
 type Secret = Bytestring -- <= 64 bytes
 
-data Unlocked =
-  Unhtlc Htlc Secret
+data Unlocked
+  = Unlocked Locked Secret
 
-data MCheque
-  = MNormal Normal
-  | MLocked Locked
-  | MUnlocked Unlocked
+data AnyCheque
+  = AnyNormal Normal
+  | AnyLocked Locked
+  | AnyUnlocked Unlocked
 
-type Sig64 = ByteString -- 64 bytes
-type Signature = Sig64
+newtype Signature
+  = Ed25519 Sig64
 
-data Signed T = Signed T Signature
+data Signed T
+  = Signed T Signature
 ```
 
 On receiving a signed cheque, the receiver verifies that it is acceptable:
@@ -118,10 +115,10 @@ Verify:
 ```
 Signed cheque siganture = signedCheque
 message = concat cid (asBytes cheque)
-isValid = (verify verificationKey message) == signature
+isValid = verify verificationKey message == signature
 ```
 
-The `sign` and `verify` functions are `Ed25519` functions. This aligns with the
+The `sign` and `verify` correspond to `Ed25519` signing scheme. This aligns with the
 signing of txs on Cardano.
 
 ##### Normalising cheques
@@ -131,17 +128,17 @@ We call this 'normalising' a cheque.
 
 If a receiver of a locked cheque knows the secret preimage of the lock prior to
 the locked cheques timeout, then they are capable of claiming the associated
-funds. If they wait until after the timeout, they are no longer able to claim
-the funds. To avoid the unnecessary closure of the channel, the receiver
+funds. If they wait until after the timeout, they are at risk that the partner
+can claim the funds. To avoid the unnecessary closure of the channel, the receiver
 demonstrates they know the secret and request normalising the cheque.
 
 The sender, wishing for the channel to remain open, normalises the cheque. The
 sender sends a signed normal cheque with the same index and amount as the locked
-one. The normal cheque can be settled at any time.
+one. The normal cheque can be settled at any time safely.
 
 If the sender of the locked cheque does not comply in good time, the receiver
 should proceed by closing the channel and claiming the funds with the secret. In
-such case, the receiver can construct settle using the `NonLockedCheque` type.
+such case, the receiver can construct settle using the `Unlocked` type.
 
 Note that in a settle, submitted cheque must have unique indices. The receiver
 could not use both the locked and normal cheque.
@@ -153,7 +150,7 @@ We call this 'raising' a cheque. Raising allows for the reuse of a cheque index,
 and can facilitate features such as parallel stream payment.
 
 Note that in a settle, submitted cheque must have unique indices. The receiver
-could use only the cheque of greatest value per index.
+is naturally incentivised to use the cheque of greatest value per index.
 
 #### Snapshot
 
@@ -162,7 +159,7 @@ It includes the L2 amounts and indicates which cheques have been **accounted**
 for, and by its complement, which are **unaccounted** for.
 
 A snapshot can be used when stepping the channel. When used, it provides a lower
-bound on the future settlement.
+bound indices on the future settlement.
 
 ```haskell
 data Exclude = [Index]
@@ -171,12 +168,12 @@ data Squash =
   { amt :: Amount
   , idx :: Index
   , exc :: Exclude
-}
+  }
 
 data Snapshot = Snapshot
   { sq0 :: Squash
   , sq1 :: Squash
-}
+  }
 ```
 
 A **squash** gets its name from representing a set of cheques 'squashed' into a
@@ -189,6 +186,7 @@ with index `>= idx` is unaccounted for.
 To be considered wellformed `exc` is a monotonically increasing list of indices
 that are strictly less than `idx - 1`.
 
+-- XXX: Maybe lexicographical ordering should be here from the beginning?
 `sq0` represents all the cheques _received_ by the opener ie partner of key
 `vk0 = fst keys`. Thus the `sq0 .^ amt` is the amount `vk0` is owed by `vk1`.
 
@@ -202,10 +200,12 @@ taking the respective squashes with greatest amount.
 
 ```haskell
 max :: Squash -> Squash -> Squash
-max sq0 sq1 = (sq0 .^ amt) < (sq1 .^ amt) ? sq1 :? sq0
+max sq0 sq1 = if (sq0 .^ amt) < (sq1 .^ amt)
+  then sq1
+  else sq0
 
 unionSnapshot :: Snapshot -> Snapshot -> Snapshot
-unionSnapshot (Snapshot sq00 sq10) (Snapshot sq01 sq11)
+unionSnapshot (Snapshot sq00 sq01) (Snapshot sq10 sq11)
   = Snapshot (max sq00 sq10) (max sq01 sq11)
 ```
 
@@ -221,7 +221,9 @@ in a settle.
 ##### Signing snapshots
 
 This works analogously to signatures of cheques. That is, its `Ed25519`, and the
-message is the concatenation of the channel id and the snapshot.
+message is the concatenation of the channel id and the snapshot as bytes.
+
+Signature under snapshot consolidates and finalizes commitments from the accounted by approving both sent and received amounts. Commitments to not accounted cheques can still be increased by the issuer though.
 
 Signed snapshots should be exchanged periodically.
 
@@ -243,17 +245,17 @@ established elsewhere.
 A receipt consists of a snapshot and unaccounted (maybe unlocked) cheques.
 
 ```haskell
-data Receipt = Receipt (Maybe (Signed Snapshot)) [(Signed MCheque)]
+data Receipt = Receipt (Maybe (Signed Snapshot)) [(Signed AnyCheque)]
 ```
 
 The receipt is used in a close or resolve step. It is constructed by the partner
 performing the step.
 
 A valid receipt will include a valid signed snapshot, and list of valid signed
-non-locked cheques and valid locked cheques. Moreover, the cheques must have
+non-locked cheques and valid locked cheques. All the cheques listed are the one which that partnere received and signed byt the counter party. Moreover, the cheques must have
 unique indices and are all unaccounted for in the snapshot.
 
-The logic should fail if the indices of the `MCheque`s are not strictly
+The logic should fail if the indices of the `AnyCheque`s are not strictly
 increasing.
 
 #### Datum
@@ -276,7 +278,7 @@ this is linear in the number of arguments.
 
 ```haskell
 data ScriptHash = ByteArray -- 28 bytes
-type VerificationKey = ByteString -- 32 bytes,
+type VerificationKey = ByteString -- not hashed, 32 bytes
 type Keys = (VerificationKey, VerificationKey)
 data Datum = (ScriptHash, Keys, Stage)
 ```
@@ -305,20 +307,27 @@ The params are as follows
 ```haskell
 data OpenedParams = OpenedParams
   { amt1 :: Amount
+  -- XXX: Is the whole snapshot is needed here?
+  --      Shouldn't we store just two amounts here (as inidices)?
   , snapshot :: Snapshot
   -- ^ defaults to `Snapshot (Squash 0 0 []) (Squash 0 0 [])`
-}
+  }
 ```
 
 - The keys should be ordered `(opener, non-opener)`.
 - `amt1` is the amount of channel funds that belong to the not-opener partner.
   Typically this will start at 0 as all funds are provided by the opener.
   However, this is not enforced and up to the partners to decide.
+-- XXX: Isn't this comment misleading? Isn't L1 cached snapshot only a safe point
+--      which prevents older snapshots settlement?
 - `snapshot` provides the ability to place a lower bound for the eventual
   settled state. This allows partners to know, and limit an upper bound on
   potential losses in the case of some catastrophic failure.
 
 ```haskell
+-- XXX: I don't believe that we can reduce before we have the counterparty
+--      receipt at hand. The snapshot can invalidate complately list of cheques because
+--      of higher index.
 data LockedChequeReduced = HtlcRed Amount Timeout Lock
 data Pend = Pend Amount [LockedChequeReduced]
 

@@ -14,8 +14,8 @@ tags:
 CL needs a starting point. We propose the minimal lifecycle.
 
 This ADR introduces fundamental components and vocab. It is focussed only on
-what is essential to the L1 component so that a channel is safe functional and
-safe. It is not concerned with any nice-to-haves, or efficiency.
+what is essential to the L1 component so that a channel is functional and safe.
+It is not concerned with any nice-to-haves, or efficiency.
 
 ## Decision
 
@@ -151,7 +151,7 @@ stage passed a close.
 
 From a closed stage, only the closer has settled, so only they can perform a
 free. The funds associated to a freed cheque are not released, but added to
-their balance.
+their balance in their settled state.
 
 From a responded stage, the closer should resolve the channel to a resolved
 stage. Regardless, either partner can perform a free step. The associated funds
@@ -214,14 +214,14 @@ This is feasible and in some sense simpler, with respect to fewer steps.
 However, it introduces additional complexities into the script. Naively
 implemented, it would introduce the potential of double satisfaction attacks.
 
-We may revisit this in future.
+We may revisit this in the future.
 
 ### Considered Alternatives
 
 #### De-threading pending cheques
 
-We contemplated splitting the pending cheques into a separate thread. There are
-some advantages to this.
+We contemplated splitting the pending cheques into a separate threads on
+separate utxos similarly to BLN. There are some advantages to this.
 
 It compounds the problem of min ada - which exists for single thread, but
 becomes 40 times worse if, say, locked cheques must be split off into their own

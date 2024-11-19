@@ -98,9 +98,9 @@ Other:
 
 ### Blackboxed L1 api
 
-Before wee write the plutus script(s), tx building functions and setup chain
+Before we write the plutus script(s), tx building functions and setup chain
 indexers,  
-lets have an interface modelling the L1.
+let's have an interface modelling the L1.
 
 Here's a proposal:
 
